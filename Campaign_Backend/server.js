@@ -1,0 +1,30 @@
+const express = require('express');
+const http = require('http');
+const cookieParser = require('cookie-parser');
+const path = require('path');
+const socketConfig = require('./config/socket');
+
+const authRoutes = require('./routes/authRoutes');
+const mlaRoutes = require('./routes/mlaRoutes');
+const documentRoutes = require('./routes/documentRoutes');
+
+const app = express();
+const server = http.createServer(app);
+
+// Initialize Websockets via shared abstraction
+socketConfig.init(server);
+
+// Global Middlewares
+app.use(express.json());
+app.use(cookieParser());
+app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
+
+// Routes Mapping
+app.use('/api/auth', authRoutes);
+app.use('/api/mlas', mlaRoutes);
+app.use('/api/documents', documentRoutes);
+
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => {
+  console.log(`Server executing securely on port ${PORT}`);
+});
