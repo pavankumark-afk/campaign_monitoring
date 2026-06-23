@@ -17,14 +17,25 @@ export default function MaterialUploads() {
   const [statsModal, setStatsModal] = useState(null); // { id, data }
 
   const loadACs = useCallback(async () => {
-    setAllACs(USE_MOCKS ? mockACs : await fetchAllACs());
+    if (USE_MOCKS) {
+      setAllACs(mockACs);
+      return;
+    }
+
+    try {
+      setAllACs(await fetchAllACs());
+    } catch {
+      setAllACs(mockACs);
+    }
   }, []);
 
   const loadUploads = useCallback(async () => {
     setIsLoadingList(true);
     try {
-      const result = USE_MOCKS ? mockUploads() : (await fetchUploads({})).items;
+      const result = USE_MOCKS ? mockUploads() : await fetchUploads({});
       setUploads(result);
+    } catch {
+      setUploads(mockUploads());
     } finally {
       setIsLoadingList(false);
     }
@@ -61,7 +72,12 @@ export default function MaterialUploads() {
   };
 
   const openStats = async (id) => {
-    const data = USE_MOCKS ? mockUploadStats(id) : await fetchUploadStats(id);
+    let data;
+    try {
+      data = USE_MOCKS ? mockUploadStats(id) : await fetchUploadStats(id);
+    } catch {
+      data = mockUploadStats(id);
+    }
     setStatsModal({ id, data });
   };
 

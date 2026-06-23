@@ -13,8 +13,12 @@ export default function MaterialDownloadStats() {
   useEffect(() => {
     (async () => {
       setIsLoading(true);
-      const result = USE_MOCKS ? mockUploads() : (await fetchUploads({})).items;
-      setUploads(result);
+      try {
+        const result = USE_MOCKS ? mockUploads() : await fetchUploads({});
+        setUploads(result);
+      } catch {
+        setUploads(mockUploads());
+      }
       setIsLoading(false);
     })();
   }, []);

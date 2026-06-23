@@ -1,6 +1,17 @@
 const pool = require('../config/db');
 const { getIo, getActiveSockets } = require('../config/socket');
 
+function parseSpecificIds(rawValue) {
+  if (!rawValue) return [];
+  if (Array.isArray(rawValue)) return rawValue;
+  try {
+    const parsed = JSON.parse(rawValue);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 // Requirement 4: Super Admin Uploads and Multi-Target Notifications
 exports.uploadAndDistribute = async (req, res) => {
   const { title, fileType, content, targetType, specificIds } = req.body; 
@@ -20,10 +31,27 @@ exports.uploadAndDistribute = async (req, res) => {
     // Determine target recipient IDs
     let targetMlaIds = [];
     if (targetType === 'ALL') {
-      const mlaQuery = await pool.query("SELECT id FROM mlas WHERE role IN ('mla', 'admin')");
+      const mlaQuery = await pool.query("SELECT id FROM mlas WHERE role = 'ac'");
       targetMlaIds = mlaQuery.rows.map(r => r.id);
     } else if (targetType === 'SPECIFIC') {
-      targetMlaIds = JSON.parse(specificIds); // e.g., [3, 5, 8]
+      const requestedIds = parseSpecificIds(specificIds);
+      const numericIds = requestedIds.filter((value) => Number.isInteger(value));
+      const acCodes = requestedIds.filter((value) => typeof value === 'string' && value.trim());
+
+      if (acCodes.length > 0) {
+        const recipients = await pool.query(
+          "SELECT id FROM mlas WHERE role = 'ac' AND ac_id = ANY($1::text[])",
+          [acCodes]
+        );
+        numericIds.push(...recipients.rows.map((row) => row.id));
+      }
+
+      targetMlaIds = [...new Set(numericIds.map((value) => Number(value)).filter(Number.isInteger))];
+    }
+
+    if (targetMlaIds.length === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(400).json({ error: 'No valid AC recipients were selected.' });
     }
 
     // Insert mapping records into Junction table

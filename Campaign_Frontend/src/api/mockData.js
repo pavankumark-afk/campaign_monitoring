@@ -2,7 +2,7 @@
 // backend is wired up. Toggle off via VITE_USE_MOCKS=false once real
 // endpoints exist — see src/api/*.js for the real contracts.
 
-export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS !== 'false';
+export const USE_MOCKS = false; // Mocks disabled - using Express backend
 
 const ACS = Array.from({ length: 175 }, (_, i) => {
   const id = `AC${String(i + 1).padStart(3, '0')}`;

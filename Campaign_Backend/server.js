@@ -3,7 +3,9 @@ const http = require('http');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const socketConfig = require('./config/socket');
-
+const cors = require('cors');
+const dotenv = require('dotenv');
+dotenv.config();
 const authRoutes = require('./routes/authRoutes');
 const mlaRoutes = require('./routes/mlaRoutes');
 const documentRoutes = require('./routes/documentRoutes');
@@ -14,6 +16,7 @@ const server = http.createServer(app);
 // Initialize Websockets via shared abstraction
 socketConfig.init(server);
 
+app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 // Global Middlewares
 app.use(express.json());
 app.use(cookieParser());
@@ -24,7 +27,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/mlas', mlaRoutes);
 app.use('/api/documents', documentRoutes);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server executing securely on port ${PORT}`);
 });

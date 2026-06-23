@@ -8,14 +8,20 @@ import {
   mockSirTrend,
 } from '../api/mockData';
 
-function useAsync(fetcher, deps) {
+function useAsync(fetcher, deps, fallback) {
   const [state, setState] = useState({ data: null, isLoading: true, error: null });
 
   const load = useCallback(() => {
     setState((s) => ({ ...s, isLoading: true, error: null }));
     fetcher()
       .then((data) => setState({ data, isLoading: false, error: null }))
-      .catch((error) => setState({ data: null, isLoading: false, error }));
+      .catch((error) => {
+        if (fallback) {
+          setState({ data: fallback(), isLoading: false, error: null });
+          return;
+        }
+        setState({ data: null, isLoading: false, error });
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
@@ -29,24 +35,31 @@ function useAsync(fetcher, deps) {
 export function useSirSummary(scope, acId) {
   return useAsync(
     () => (USE_MOCKS ? Promise.resolve(mockSirSummary(scope, acId)) : fetchSirSummary({ scope, ac_id: acId })),
-    [scope, acId]
+    [scope, acId],
+    () => mockSirSummary(scope, acId)
   );
 }
 
 export function useAcBreakdown() {
-  return useAsync(() => (USE_MOCKS ? Promise.resolve(mockAcBreakdown()) : fetchAcBreakdown()), []);
+  return useAsync(
+    () => (USE_MOCKS ? Promise.resolve(mockAcBreakdown()) : fetchAcBreakdown()),
+    [],
+    () => mockAcBreakdown()
+  );
 }
 
 export function useBoothBreakdown(acId) {
   return useAsync(
     () => (USE_MOCKS ? Promise.resolve(mockBoothBreakdown(acId)) : fetchBoothBreakdown(acId)),
-    [acId]
+    [acId],
+    () => mockBoothBreakdown(acId)
   );
 }
 
 export function useSirTrend(scope, acId, days = 14) {
   return useAsync(
     () => (USE_MOCKS ? Promise.resolve(mockSirTrend(days)) : fetchSirTrend({ scope, ac_id: acId, days })),
-    [scope, acId, days]
+    [scope, acId, days],
+    () => mockSirTrend(days)
   );
 }
