@@ -36,7 +36,7 @@ export function useSirSummary(scope, acId) {
   return useAsync(
     () => (USE_MOCKS ? Promise.resolve(mockSirSummary(scope, acId)) : fetchSirSummary({ scope, ac_id: acId })),
     [scope, acId],
-    () => mockSirSummary(scope, acId)
+    USE_MOCKS ? () => mockSirSummary(scope, acId) : null
   );
 }
 
@@ -44,7 +44,7 @@ export function useAcBreakdown() {
   return useAsync(
     () => (USE_MOCKS ? Promise.resolve(mockAcBreakdown()) : fetchAcBreakdown()),
     [],
-    () => mockAcBreakdown()
+    USE_MOCKS ? () => mockAcBreakdown() : null
   );
 }
 
@@ -52,7 +52,7 @@ export function useBoothBreakdown(acId) {
   return useAsync(
     () => (USE_MOCKS ? Promise.resolve(mockBoothBreakdown(acId)) : fetchBoothBreakdown(acId)),
     [acId],
-    () => mockBoothBreakdown(acId)
+    USE_MOCKS ? () => mockBoothBreakdown(acId) : null
   );
 }
 
@@ -60,6 +60,6 @@ export function useSirTrend(scope, acId, days = 14) {
   return useAsync(
     () => (USE_MOCKS ? Promise.resolve(mockSirTrend(days)) : fetchSirTrend({ scope, ac_id: acId, days })),
     [scope, acId, days],
-    () => mockSirTrend(days)
+    USE_MOCKS ? () => mockSirTrend(days) : null
   );
 }

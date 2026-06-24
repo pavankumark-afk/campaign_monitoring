@@ -9,9 +9,10 @@ import { formatNumber, formatPercent, formatRelativeTime } from '../../utils/for
 
 export default function AcDashboard() {
   const { user } = useAuth();
-  const { data: summary, isLoading: summaryLoading, reload } = useSirSummary('ac', user?.acId);
-  const { data: booths, isLoading: boothsLoading } = useBoothBreakdown(user?.acId);
-  const { data: trend } = useSirTrend('ac', user?.acId, 14);
+  const { data: summary, isLoading: summaryLoading, error: summaryError, reload } = useSirSummary('ac', user?.acId);
+  const { data: booths, isLoading: boothsLoading, error: boothsError } = useBoothBreakdown(user?.acId);
+  const { data: trend, error: trendError } = useSirTrend('ac', user?.acId, 14);
+  const dashboardError = summaryError || boothsError || trendError;
 
   const boothRows = (booths || [])
     .slice()
@@ -34,21 +35,33 @@ export default function AcDashboard() {
         </button>
       </div>
 
+      {dashboardError && (
+        <div className="page-section">
+          <Card title="Live metrics unavailable" subtitle="Could not fetch hierarchical metrics from backend">
+            <p style={{ color: 'var(--color-danger-700)', margin: 0 }}>
+              {dashboardError?.response?.status
+                ? `Request failed with status ${dashboardError.response.status}.`
+                : dashboardError?.message || 'Unknown API error'}
+            </p>
+          </Card>
+        </div>
+      )}
+
       <div className="stat-grid page-section">
-        <StatTile label="Total Electors" value={summaryLoading ? '—' : formatNumber(summary.totalElectors)} />
+        <StatTile label="Total Electors" value={summaryLoading ? '—' : formatNumber(summary?.totalElectors)} />
         <StatTile
           label="Contacted"
-          value={summaryLoading ? '—' : formatNumber(summary.totalContacted)}
-          delta={summaryLoading ? null : formatPercent(summary.totalContacted, summary.totalElectors) + ' of total'}
+          value={summaryLoading ? '—' : formatNumber(summary?.totalContacted)}
+          delta={summaryLoading ? null : formatPercent(summary?.totalContacted, summary?.totalElectors) + ' of total'}
           deltaDirection="up"
         />
         <StatTile
           label="Pending"
-          value={summaryLoading ? '—' : formatNumber(summary.totalPending)}
-          delta={summaryLoading ? null : formatPercent(summary.totalPending, summary.totalElectors) + ' remaining'}
+          value={summaryLoading ? '—' : formatNumber(summary?.totalPending)}
+          delta={summaryLoading ? null : formatPercent(summary?.totalPending, summary?.totalElectors) + ' remaining'}
           deltaDirection="down"
         />
-        <StatTile label="Booth Level Agents" value={summaryLoading ? '—' : formatNumber(summary.totalBoothAgents)} />
+        <StatTile label="Booth Level Agents" value={summaryLoading ? '—' : formatNumber(summary?.totalBoothAgents)} />
       </div>
 
       <div className="page-section">
