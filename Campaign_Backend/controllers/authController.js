@@ -61,7 +61,15 @@ exports.login = async (req, res) => {
     const token = jwt.sign({ id: account.id, role: account.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
     
     res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'strict' });
-    res.status(200).json({ message: 'Login successful', role: account.role });
+    res.status(200).json({ 
+      message: 'Login successful', 
+      access_token: token,
+      role: account.role,
+      id: account.id,
+      name: account.name,
+      ac_id: account.ac_id ?? null,
+      ac_name: account.ac_name ?? null
+    });
   } catch (err) {
     console.error("Database Runtime Error: ", err);
     res.status(500).json({ error: err.message });

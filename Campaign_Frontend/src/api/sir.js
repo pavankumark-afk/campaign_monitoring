@@ -1,40 +1,30 @@
 import { apiClient } from './client';
 
 /**
- * Backend contract (FastAPI):
- *
- * GET /sir/summary?scope=super_admin
- *   -> { totalElectors, totalContacted, totalPending, totalACs, totalBLAs, lastSyncedAt }
- *
- * GET /sir/summary?scope=ac&ac_id=AC012
- *   -> { totalElectors, totalContacted, totalPending, totalBoothAgents, lastSyncedAt }
- *
- * GET /sir/ac-breakdown   (super admin only — used for the AC-wise tally list)
- *   -> [{ acId, acName, totalElectors, contacted, pending }]
- *
- * GET /sir/booth-breakdown?ac_id=AC012   (AC level — booth agent wise tally)
- *   -> [{ boothId, boothName, agentName, totalElectors, contacted, pending }]
- *
- * GET /sir/trend?scope=super_admin|ac&ac_id=...&days=14
- *   -> [{ date: "2026-06-10", contacted: 1200 }, ...]
+ * Note: SIR (Voter Monitoring) endpoints not available in Express backend.
+ * These endpoints need to be implemented in the backend:
+ * - GET /sir/summary
+ * - GET /sir/ac-breakdown
+ * - GET /sir/booth-breakdown
+ * - GET /sir/trend
  */
 
 export const fetchSirSummary = async (params) => {
-  const { data } = await apiClient.get('/sir/summary', { params });
-  return data;
+  console.warn('fetchSirSummary: Not implemented in Express backend');
+  throw new Error('SIR endpoints not yet implemented in backend');
 };
 
 export const fetchAcBreakdown = async () => {
-  const { data } = await apiClient.get('/sir/ac-breakdown');
-  return data;
+  console.warn('fetchAcBreakdown: Not implemented in Express backend');
+  throw new Error('SIR endpoints not yet implemented in backend');
 };
 
 export const fetchBoothBreakdown = async (acId) => {
-  const { data } = await apiClient.get('/sir/booth-breakdown', { params: { ac_id: acId } });
-  return data;
+  console.warn('fetchBoothBreakdown: Not implemented in Express backend');
+  throw new Error('SIR endpoints not yet implemented in backend');
 };
 
 export const fetchSirTrend = async (params) => {
-  const { data } = await apiClient.get('/sir/trend', { params });
-  return data;
+  console.warn('fetchSirTrend: Not implemented in Express backend');
+  throw new Error('SIR endpoints not yet implemented in backend');
 };

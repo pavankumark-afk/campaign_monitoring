@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { login as loginApi, logout as logoutApi, fetchProfile } from '../api/auth';
+import { login as loginApi, logout as logoutApi } from '../api/auth';
 import { registerUnauthorizedHandler } from '../api/client';
 import { USE_MOCKS } from '../api/mockData';
 
@@ -69,16 +69,7 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // Token looks valid — refresh profile from backend (non-blocking on failure)
-    fetchProfile()
-      .then((profile) => {
-        setUser(profile);
-        localStorage.setItem(USER_KEY, JSON.stringify(profile));
-      })
-      .catch(() => {
-        // keep cached user if /auth/me isn't reachable; interceptor handles true 401
-      })
-      .finally(() => setIsLoading(false));
+    setIsLoading(false);
   }, [clearSession]);
 
   const login = useCallback(async (username, password) => {

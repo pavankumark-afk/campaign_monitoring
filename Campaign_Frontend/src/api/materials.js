@@ -1,38 +1,51 @@
 import { apiClient, uploadClient } from './client';
 
+function normalizeMetricsRow(row) {
+  return {
+    id: row.document_id,
+    title: row.document_title,
+    fileName: row.document_title,
+    fileSize: null,
+    uploadedAt: row.created_at ?? null,
+    targetScope: 'all',
+    acIds: [],
+    downloadCount: row.total_download_count ?? 0,
+    clickCount: row.total_download_count ?? 0,
+    downloadedByACs: (row.each_mla_download_breakdown || []).map((item) => ({
+      acId: String(item.mla_id),
+      acName: item.mla_name,
+      downloadedAt: null,
+      clicks: item.times_downloaded ?? 0,
+    })),
+  };
+}
+
 /**
- * Backend contract (FastAPI):
+ * Backend contract (Express):
  *
- * POST /materials/upload   (multipart/form-data, super admin only)
- *   fields: file, title, target_scope ("all" | "selected"), ac_ids[] (when selected)
- *   -> { id, title, fileName, fileUrl, uploadedAt, targetScope, acIds }
+ * POST /documents/upload   (multipart/form-data, super admin only)
+ *   fields: file, title, targetType ("ALL" | "SPECIFIC"), specificIds[] (when selected)
+ *   -> { message, document }
  *
- * GET /materials/uploads?page=&search=&from=&to=
- *   -> { items: [{ id, title, fileName, fileSize, uploadedAt, targetScope, acIds, downloadCount, clickCount }], total }
+ * GET /documents/:docId/download
+ *   -> file blob
  *
- * GET /materials/uploads/:id/stats
- *   -> { id, title, totalTargetACs, downloadedByACs: [{ acId, acName, downloadedAt, clicks }], notDownloadedACs: [{ acId, acName }] }
- *
- * DELETE /materials/uploads/:id
- *
- * --- AC-level ---
- * GET /materials/my-list?page=&from=&to=
- *   -> { items: [{ id, title, fileName, fileSize, uploadedAt, clicks, downloaded }], total }
- *
- * POST /materials/:id/track-click      (fire when AC user opens/clicks a row, for analytics)
- * GET  /materials/:id/download         (returns redirect / blob — actual file)
+ * GET /documents/metrics   (super admin only)
+ *   -> { ... }
  */
 
-export const uploadMaterial = async ({ file, title, targetScope, acIds, onProgress }) => {
+export const uploadMaterial = async ({ file, title, targetScope, specificIds, acIds, onProgress }) => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('title', title);
-  formData.append('target_scope', targetScope);
-  if (targetScope === 'selected' && acIds?.length) {
-    acIds.forEach((id) => formData.append('ac_ids', id));
+  formData.append('targetType', targetScope === 'selected' ? 'SPECIFIC' : 'ALL');
+  const recipientIds = specificIds ?? acIds;
+  
+  if (targetScope === 'selected' && recipientIds?.length) {
+    formData.append('specificIds', JSON.stringify(recipientIds));
   }
 
-  const { data } = await uploadClient.post('/materials/upload', formData, {
+  const { data } = await uploadClient.post('/documents/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: (evt) => {
       if (onProgress && evt.total) {
@@ -44,27 +57,47 @@ export const uploadMaterial = async ({ file, title, targetScope, acIds, onProgre
 };
 
 export const fetchUploads = async (params) => {
-  const { data } = await apiClient.get('/materials/uploads', { params });
-  return data;
+  const { data } = await apiClient.get('/documents/metrics', { params });
+  return Array.isArray(data) ? data.map(normalizeMetricsRow) : [];
 };
 
 export const fetchUploadStats = async (materialId) => {
-  const { data } = await apiClient.get(`/materials/uploads/${materialId}/stats`);
-  return data;
+  const { data } = await apiClient.get('/documents/metrics');
+  const row = Array.isArray(data) ? data.find((item) => String(item.document_id) === String(materialId)) : null;
+  if (!row) {
+    return {
+      id: materialId,
+      title: 'Material',
+      totalTargetACs: 0,
+      downloadedByACs: [],
+      notDownloadedACs: [],
+    };
+  }
+
+  const normalized = normalizeMetricsRow(row);
+  return {
+    id: normalized.id,
+    title: normalized.title,
+    totalTargetACs: normalized.downloadedByACs.length,
+    downloadedByACs: normalized.downloadedByACs,
+    notDownloadedACs: [],
+  };
 };
 
 export const deleteMaterial = async (materialId) => {
-  await apiClient.delete(`/materials/uploads/${materialId}`);
+  console.warn('deleteMaterial: Delete functionality not implemented in Express backend');
+  // Awaiting backend implementation
 };
 
 export const fetchMyMaterials = async (params) => {
-  const { data } = await apiClient.get('/materials/my-list', { params });
-  return data;
+  console.warn('fetchMyMaterials: Not implemented in Express backend');
+  throw new Error('User materials list not yet implemented in backend');
 };
 
 export const trackMaterialClick = async (materialId) => {
   try {
-    await apiClient.post(`/materials/${materialId}/track-click`);
+    // Analytics tracking not yet implemented
+    console.log('Click tracked for material:', materialId);
   } catch {
     // analytics tracking should never block the actual download
   }
@@ -72,5 +105,5 @@ export const trackMaterialClick = async (materialId) => {
 
 export const downloadMaterialUrl = (materialId) => {
   const base = apiClient.defaults.baseURL;
-  return `${base}/materials/${materialId}/download`;
+  return `${base}/documents/${materialId}/download`;
 };

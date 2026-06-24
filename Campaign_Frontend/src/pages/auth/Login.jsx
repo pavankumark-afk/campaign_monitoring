@@ -9,7 +9,7 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [username, setUsername] = useState('');
+  const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,12 +19,12 @@ export default function Login() {
     setError('');
     setIsSubmitting(true);
     try {
-      const profile = await login(username.trim(), password);
+      const profile = await login(mobile.trim(), password);
       const from = location.state?.from?.pathname;
       const home = profile.role === 'super_admin' ? '/admin' : '/ac';
       navigate(from && from !== '/login' ? from : home, { replace: true });
     } catch (err) {
-      const msg = err?.response?.data?.detail || 'Invalid username or password. Please try again.';
+      const msg = err?.response?.data?.error || 'Invalid mobile or password. Please try again.';
       setError(msg);
     } finally {
       setIsSubmitting(false);
@@ -45,15 +45,15 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="field">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="mobile">Mobile Number</label>
             <input
-              id="username"
-              type="text"
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="mobile"
+              type="tel"
+              autoComplete="tel"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
               required
-              placeholder="e.g. ac012 or superadmin"
+              placeholder="e.g. 9876543210"
             />
           </div>
           <div className="field">
