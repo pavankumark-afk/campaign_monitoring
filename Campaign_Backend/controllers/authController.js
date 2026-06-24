@@ -60,7 +60,13 @@ exports.login = async (req, res) => {
 
     const token = jwt.sign({ id: account.id, role: account.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
     
-    res.cookie('token', token, { httpOnly: true, secure: false, sameSite: 'strict' });
+   // Replace your current res.cookie line with this:
+res.cookie('token', token, { 
+  httpOnly: true, 
+  secure: process.env.NODE_ENV === 'production', // true in production (requires HTTPS), false in local dev
+  sameSite: 'lax',                               // 'lax' is much more forgiving for local development cross-port environments
+  maxAge: 24 * 60 * 60 * 1000                    // 1 day in milliseconds (explicitly sets cookie lifespan)
+});
     res.status(200).json({ 
       message: 'Login successful', 
       role: account.role,
