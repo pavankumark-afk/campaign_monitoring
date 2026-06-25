@@ -7,7 +7,7 @@ export default function AcPicker({ allACs, selectedIds, onChange }) {
   const filtered = useMemo(() => {
     if (!search.trim()) return allACs;
     const q = search.trim().toLowerCase();
-    return allACs.filter((a) => a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q));
+    return allACs.filter((a) => a.name.toLowerCase().includes(q) || String(a.id).toLowerCase().includes(q));
   }, [allACs, search]);
 
   const toggle = (id) => {

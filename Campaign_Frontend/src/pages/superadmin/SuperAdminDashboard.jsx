@@ -19,7 +19,7 @@ export default function SuperAdminDashboard() {
     const sorted = [...breakdown].sort((a, b) => {
       const pa = a.contacted / a.totalElectors;
       const pb = b.contacted / b.totalElectors;
-      return pa - pb; // lowest progress first -> needs attention
+      return pb - pa; // highest progress first
     });
     if (!search.trim()) return sorted;
     const q = search.trim().toLowerCase();
@@ -81,7 +81,7 @@ export default function SuperAdminDashboard() {
 
       <Card
         title="AC-wise progress"
-        subtitle="Sorted by lowest completion — constituencies needing attention surface first"
+        subtitle="Sorted by highest completion — top-performing constituencies first"
         action={
           <div style={{ position: 'relative' }}>
             <Search size={15} style={{ position: 'absolute', left: 10, top: 9, color: 'var(--color-text-muted)' }} />

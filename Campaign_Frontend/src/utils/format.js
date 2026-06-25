@@ -5,7 +5,15 @@ export const formatNumber = (n) => {
 
 export const formatPercent = (done, total) => {
   if (!total) return '0%';
-  return `${Math.round((done / total) * 100)}%`;
+  const pct = (Number(done) / Number(total)) * 100;
+  if (!Number.isFinite(pct) || pct <= 0) return '0%';
+
+  // Show precise display value without whole-number rounding.
+  const truncated = Math.trunc(pct * 10000) / 10000;
+  return `${truncated.toLocaleString('en-IN', {
+    minimumFractionDigits: truncated < 1 ? 2 : 0,
+    maximumFractionDigits: 4,
+  })}%`;
 };
 
 export const formatDate = (iso) => {

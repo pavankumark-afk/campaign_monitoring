@@ -4,19 +4,29 @@ import Card from '../../components/common/Card';
 import { fetchMyMaterials, trackMaterialClick, downloadMaterialUrl } from '../../api/materials';
 import { USE_MOCKS, mockMyMaterials } from '../../api/mockData';
 import { formatDate, formatFileSize } from '../../utils/format';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AcMaterials() {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     (async () => {
       setIsLoading(true);
-      const result = USE_MOCKS ? mockMyMaterials() : (await fetchMyMaterials({})).items;
-      setItems(result);
-      setIsLoading(false);
+      setError('');
+      try {
+        const result = USE_MOCKS ? mockMyMaterials() : (await fetchMyMaterials({ acId: user?.acId })).items;
+        setItems(result);
+      } catch (err) {
+        setItems([]);
+        setError(err?.message || 'Unable to load materials.');
+      } finally {
+        setIsLoading(false);
+      }
     })();
-  }, []);
+  }, [user?.acId]);
 
   const handleDownload = async (item) => {
     await trackMaterialClick(item.id);
@@ -42,6 +52,11 @@ export default function AcMaterials() {
       <Card>
         {isLoading ? (
           <p style={{ color: 'var(--color-text-muted)' }}>Loading materials…</p>
+        ) : error ? (
+          <div className="empty-state">
+            <h4>Materials unavailable</h4>
+            <p>{error}</p>
+          </div>
         ) : items.length === 0 ? (
           <div className="empty-state">
             <h4>No materials yet</h4>

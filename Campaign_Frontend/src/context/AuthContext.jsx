@@ -1,17 +1,15 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
-import { jwtDecode } from 'jwt-decode';
 import { login as loginApi, logout as logoutApi } from '../api/auth';
 import { registerUnauthorizedHandler } from '../api/client';
-import { USE_MOCKS } from '../api/mockData';
 
 export const ROLES = {
   SUPER_ADMIN: 'super_admin',
   AC: 'ac',
+  MLA: 'mla',
 };
 
 const AuthContext = createContext(null);
 
-const TOKEN_KEY = 'sir_access_token';
 const USER_KEY = 'sir_user';
 
 function readStoredUser() {
@@ -29,7 +27,6 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
 
   const clearSession = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setUser(null);
   }, []);
@@ -41,41 +38,14 @@ export function AuthProvider({ children }) {
     });
   }, [clearSession]);
 
-  // On boot: validate token expiry, optionally refresh profile
+  // On boot: rely on cached user profile; cookie auth is handled server-side.
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-
-    if (USE_MOCKS) {
-      // Mock tokens aren't real JWTs — trust the cached user as-is.
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const decoded = jwtDecode(token);
-      const isExpired = decoded.exp && decoded.exp * 1000 < Date.now();
-      if (isExpired) {
-        clearSession();
-        setIsLoading(false);
-        return;
-      }
-    } catch {
-      clearSession();
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(false);
-  }, [clearSession]);
+  }, []);
 
   const login = useCallback(async (username, password) => {
     setError(null);
     const data = await loginApi(username, password);
-    localStorage.setItem(TOKEN_KEY, data.access_token);
 
     const profile = {
       id: data.id ?? data.user_id ?? username,
@@ -101,7 +71,7 @@ export function AuthProvider({ children }) {
       isLoading,
       error,
       isSuperAdmin: user?.role === ROLES.SUPER_ADMIN,
-      isAC: user?.role === ROLES.AC,
+      isAC: user?.role === ROLES.AC || user?.role === ROLES.MLA,
       login,
       logout,
     }),

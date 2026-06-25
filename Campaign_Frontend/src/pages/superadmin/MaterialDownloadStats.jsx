@@ -67,19 +67,19 @@ export default function MaterialDownloadStats() {
                   <th>Uploaded</th>
                   <th
                     className="data-table__numeric"
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', textAlign: 'left' }}
                     onClick={() => setSortBy('clickCount')}
                   >
                     Clicks {sortBy === 'clickCount' && '↓'}
                   </th>
                   <th
                     className="data-table__numeric"
-                    style={{ cursor: 'pointer' }}
+                    style={{ cursor: 'pointer', textAlign: 'left' }}
                     onClick={() => setSortBy('downloadCount')}
                   >
                     Downloads {sortBy === 'downloadCount' && '↓'}
                   </th>
-                  <th className="data-table__numeric">Conversion</th>
+                  <th className="data-table__numeric" style={{ textAlign: 'left' }}>Conversion</th>
                 </tr>
               </thead>
               <tbody>
@@ -89,9 +89,9 @@ export default function MaterialDownloadStats() {
                     <tr key={u.id}>
                       <td style={{ fontWeight: 600 }}>{u.title}</td>
                       <td>{formatDate(u.uploadedAt)}</td>
-                      <td className="data-table__numeric">{formatNumber(u.clickCount)}</td>
-                      <td className="data-table__numeric">{formatNumber(u.downloadCount)}</td>
-                      <td className="data-table__numeric">{conversion}%</td>
+                      <td className="data-table__numeric" style={{ textAlign: 'left' }}>{formatNumber(u.clickCount)}</td>
+                      <td className="data-table__numeric" style={{ textAlign: 'left' }}>{formatNumber(u.downloadCount)}</td>
+                      <td className="data-table__numeric" style={{ textAlign: 'left' }}>{conversion}%</td>
                     </tr>
                   );
                 })}

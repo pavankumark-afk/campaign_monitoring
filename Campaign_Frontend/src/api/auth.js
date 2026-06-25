@@ -12,7 +12,30 @@ import { apiClient } from './client';
  */
 
 export const login = async (mobile, password) => {
-  const { data } = await apiClient.post('/auth/login', { mobile, password });
+  const baseURL = apiClient.defaults.baseURL;
+  const url = `${baseURL}/auth/login`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ mobile, password }),
+    credentials: 'include',
+  });
+
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
+
+  if (!response.ok) {
+    const message = data?.error || data?.message || 'Login failed';
+    throw new Error(message);
+  }
+
   return data;
 };
 

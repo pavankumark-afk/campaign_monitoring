@@ -36,7 +36,7 @@ export default function App() {
           </Route>
 
           {/* AC Level */}
-          <Route element={<ProtectedRoute allow={['ac']} />}>
+          <Route element={<ProtectedRoute allow={['ac', 'mla']} />}>
             <Route element={<AppShell />}>
               <Route path="/ac" element={<AcDashboard />} />
               <Route path="/ac/material" element={<AcMaterials />} />

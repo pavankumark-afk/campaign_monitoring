@@ -24,7 +24,10 @@ export default function Login() {
       const home = profile.role === 'super_admin' ? '/admin' : '/ac';
       navigate(from && from !== '/login' ? from : home, { replace: true });
     } catch (err) {
-      const msg = err?.response?.data?.error || 'Invalid mobile or password. Please try again.';
+      const msg =
+        err?.response?.data?.error ||
+        err?.message ||
+        'Invalid mobile or password. Please try again.';
       setError(msg);
     } finally {
       setIsSubmitting(false);
