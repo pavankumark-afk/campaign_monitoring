@@ -11,4 +11,12 @@ router.get(
     voterController.getNestedCampaignMetrics
 );
 
+// GET /api/voters/metrics/my-constituency
+router.get(
+  '/metrics/my-constituency', 
+  authenticate, 
+  authorize('mla'), 
+  voterController.getMlaSelfAcMetrics
+);
+
 module.exports = router;    
