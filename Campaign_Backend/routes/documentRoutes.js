@@ -5,6 +5,7 @@ const docController = require('../controllers/documentController');
 const { authenticate, authorize } = require('../middlewares/authMiddleware');
 
 router.post('/upload', authenticate, authorize('super_admin'), upload.single('file'), docController.uploadAndDistribute);
+router.get('/list', authenticate, authorize('admin', 'mla'), docController.getAvailableDocuments);
 router.get('/:docId/download', authenticate, docController.downloadDocument);
 router.get('/metrics', authenticate, authorize('super_admin'), docController.getDocumentDetailedMetrics);
 

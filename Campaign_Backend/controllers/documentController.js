@@ -76,6 +76,32 @@ exports.uploadAndDistribute = async (req, res) => {
   }
 };
 
+// NEW: Fetch all uploaded documents for Admins and MLAs to view
+exports.getAvailableDocuments = async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        id, 
+        title, 
+        file_type, 
+        created_at 
+      FROM documents 
+      ORDER BY created_at DESC;
+    `;
+    
+    const result = await pool.query(query);
+    
+    res.status(200).json({
+      success: true,
+      count: result.rows.length,
+      documents: result.rows
+    });
+  } catch (err) {
+    console.error("Fetch Documents Error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Track and record metric metrics upon Download
 exports.downloadDocument = async (req, res) => {
   const { docId } = req.params;
