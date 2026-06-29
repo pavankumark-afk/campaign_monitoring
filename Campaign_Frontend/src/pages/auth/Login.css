@@ -64,6 +64,33 @@
   margin-top: 4px;
 }
 
+.field--password .field__password-wrap {
+  position: relative;
+}
+
+.field--password .field__password-wrap input {
+  width: 100%;
+  padding-right: 44px;
+}
+
+.field__password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.field__password-toggle:hover {
+  color: var(--color-text);
+}
+
 .login__footnote {
   margin-top: 20px;
   font-size: 12px;
