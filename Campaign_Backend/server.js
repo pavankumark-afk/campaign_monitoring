@@ -17,7 +17,7 @@ const server = http.createServer(app);
 // Initialize Websockets via shared abstraction
 socketConfig.init(server);
 
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(cors({ origin: ['http://localhost:5173','https://storage.googleapis.com/campaign-monitor-app.firebasestorage.app'], credentials: true }));
 // Global Middlewares
 app.use(express.json());
 app.use(cookieParser());
