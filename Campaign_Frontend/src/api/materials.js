@@ -191,7 +191,24 @@ export const deleteMaterial = async (materialId) => {
 };
 
 export const fetchMyMaterials = async (params) => {
-  return getCachedMyMaterials(params?.acId);
+  try {
+    const { data } = await apiClient.get('/documents/list', { params });
+    const rows = Array.isArray(data?.documents) ? data.documents : [];
+
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        title: row.title ?? 'Material',
+        fileName: row.title ?? 'file',
+        fileSize: null,
+        uploadedAt: row.created_at || null,
+        clicks: 0,
+        downloaded: false,
+      })),
+    };
+  } catch {
+    return getCachedMyMaterials(params?.acId);
+  }
 };
 
 export const trackMaterialClick = async (materialId) => {
