@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Trash2, Globe2, Users, BarChart3, X } from 'lucide-react';
+import { Trash2, Globe2, Users, BarChart3, X, Download } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import MaterialUploadForm from './MaterialUploadForm';
 import { fetchAllACs } from '../../api/acs';
-import { uploadMaterial, fetchUploads, fetchUploadStats, deleteMaterial } from '../../api/materials';
+import { uploadMaterial, fetchUploads, fetchUploadStats, deleteMaterial, fetchMaterialDownloadUrl } from '../../api/materials';
 import { USE_MOCKS, mockACs, mockUploads, mockUploadStats } from '../../api/mockData';
 import { formatDate, formatFileSize, formatNumber } from '../../utils/format';
 
@@ -69,6 +69,20 @@ export default function MaterialUploads() {
     if (!window.confirm('Remove this material? ACs will no longer see it in their list.')) return;
     if (!USE_MOCKS) await deleteMaterial(id);
     setUploads((prev) => prev.filter((u) => u.id !== id));
+  };
+
+  const handleDownload = async (id) => {
+    if (USE_MOCKS) {
+      window.alert('Demo download: cannot fetch actual file in mock mode.');
+      return;
+    }
+
+    const url = await fetchMaterialDownloadUrl(id);
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      window.alert('Unable to resolve the download URL for this material.');
+    }
   };
 
   const openStats = async (id) => {
@@ -145,6 +159,9 @@ export default function MaterialUploads() {
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                         <button className="btn btn--ghost btn--icon btn--sm" title="View stats" onClick={() => openStats(u.id)}>
                           <BarChart3 size={14} />
+                        </button>
+                        <button className="btn btn--ghost btn--icon btn--sm" title="Download" onClick={() => handleDownload(u.id)}>
+                          <Download size={14} />
                         </button>
                         <button className="btn btn--ghost btn--icon btn--sm" title="Delete" onClick={() => handleDelete(u.id)}>
                           <Trash2 size={14} />

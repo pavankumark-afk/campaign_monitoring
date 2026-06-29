@@ -186,8 +186,13 @@ export const fetchUploadStats = async (materialId) => {
 };
 
 export const deleteMaterial = async (materialId) => {
-  console.warn('deleteMaterial: Delete functionality not implemented in Express backend');
-  // Awaiting backend implementation
+  const { data } = await apiClient.delete(`/documents/${materialId}`);
+  return data;
+};
+
+export const fetchMaterialDownloadUrl = async (materialId) => {
+  const { data } = await apiClient.get(`/documents/${materialId}/download`);
+  return data?.downloadUrl;
 };
 
 export const fetchMyMaterials = async (params) => {
@@ -220,7 +225,7 @@ export const trackMaterialClick = async (materialId) => {
   }
 };
 
-export const downloadMaterialUrl = (materialId) => {
-  const base = apiClient.defaults.baseURL;
-  return `${base}/documents/${materialId}/download`;
+export const downloadMaterialUrl = async (materialId) => {
+  const { data } = await apiClient.get(`/documents/${materialId}/download`);
+  return data?.downloadUrl;
 };

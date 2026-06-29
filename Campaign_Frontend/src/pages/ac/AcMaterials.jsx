@@ -33,7 +33,18 @@ export default function AcMaterials() {
     if (USE_MOCKS) {
       window.alert(`(Demo) Would download: ${item.fileName}`);
     } else {
-      window.open(downloadMaterialUrl(item.id), '_blank');
+      const url = await downloadMaterialUrl(item.id);
+      if (url) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } else {
+        window.alert('Unable to resolve the download URL for this material.');
+      }
     }
     setItems((prev) =>
       prev.map((i) => (i.id === item.id ? { ...i, clicks: i.clicks + 1, downloaded: true } : i))
