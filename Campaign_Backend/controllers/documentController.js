@@ -1,5 +1,16 @@
 const pool = require('../config/db');
 const { getIo, getActiveSockets } = require('../config/socket');
+const bucket = require('../config/firebase'); // Your Firebase Storage Bucket initialization
+const Multer = require('multer');
+
+// Configure Multer to intercept raw streaming binary payloads directly into memory buffer
+const multer = Multer({
+  storage: Multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // Safe execution ceiling: 50MB per single document file
+});
+
+// Middleware hook exposed to target routes
+exports.uploadMiddleware = multer.single('file');
 
 function parseSpecificIds(rawValue) {
   if (!rawValue) return [];
@@ -12,71 +23,132 @@ function parseSpecificIds(rawValue) {
   }
 }
 
-// Requirement 4: Super Admin Uploads and Multi-Target Notifications
+// Requirement 4: Super Admin Uploads to Firebase and Multi-Target Notifications
 exports.uploadAndDistribute = async (req, res) => {
-  const { title, fileType, content, targetType, specificIds } = req.body; 
-  // targetType options: 'ALL', 'SPECIFIC'
-  const filePath = req.file ? `/uploads/${req.file.filename}` : null;
-  const senderId = req.mla.id;
-
   try {
-    await pool.query('BEGIN');
+    if (!req.file) {
+      return res.status(400).json({ error: 'Please select a file to upload.' });
+    }
 
-    const docResult = await pool.query(
-      'INSERT INTO documents (title, file_path, file_type, content, sender_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [title, filePath, fileType, content, senderId]
-    );
-    const document = docResult.rows[0];
+    const { title, fileType, content, targetType, specificIds } = req.body; 
+    const senderId = req.mla.id;
 
-    // Determine target recipient IDs
-    let targetMlaIds = [];
-    if (targetType === 'ALL') {
-      const mlaQuery = await pool.query("SELECT id FROM mlas WHERE role = 'ac'");
-      targetMlaIds = mlaQuery.rows.map(r => r.id);
-    } else if (targetType === 'SPECIFIC') {
-      const requestedIds = parseSpecificIds(specificIds);
-      const numericIds = requestedIds.filter((value) => Number.isInteger(value));
-      const acCodes = requestedIds.filter((value) => typeof value === 'string' && value.trim());
+    // Step A: Stream memory buffer chunk payload straight out into Firebase Bucket
+    const firebaseFileName = `documents/${Date.now()}_${req.file.originalname}`;
+    const blob = bucket.file(firebaseFileName);
+    const blobStream = blob.createWriteStream({
+      metadata: { contentType: req.file.mimetype },
+    });
 
-      if (acCodes.length > 0) {
-        const recipients = await pool.query(
-          "SELECT id FROM mlas WHERE role = 'ac' AND ac_id = ANY($1::text[])",
-          [acCodes]
+    blobStream.on('error', (err) => {
+      throw new Error(`Firebase Stream Interruption: ${err.message}`);
+    });
+
+    blobStream.on('finish', async () => {
+      // Generate a permanent signed URL asset token path
+      const [fileUrl] = await blob.getSignedUrl({
+        action: 'read',
+        expires: '01-01-2050',
+      });
+
+      // Step B: Initialize Transactional state tracking on Postgres Engine
+      try {
+        await pool.query('BEGIN');
+
+        const docResult = await pool.query(
+          `INSERT INTO documents (title, file_path, file_type, content, sender_id, firebase_storage_path) 
+           VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+          [title, fileUrl, fileType, content, senderId, blob.name]
         );
-        numericIds.push(...recipients.rows.map((row) => row.id));
+        const document = docResult.rows[0];
+
+        // Determine target recipient IDs
+        let targetMlaIds = [];
+        if (targetType === 'ALL') {
+          const mlaQuery = await pool.query("SELECT id FROM mlas WHERE role = 'ac'");
+          targetMlaIds = mlaQuery.rows.map(r => r.id);
+        } else if (targetType === 'SPECIFIC') {
+          const requestedIds = parseSpecificIds(specificIds);
+          const numericIds = requestedIds.filter((value) => Number.isInteger(value));
+          const acCodes = requestedIds.filter((value) => typeof value === 'string' && value.trim());
+
+          if (acCodes.length > 0) {
+            const recipients = await pool.query(
+              "SELECT id FROM mlas WHERE role = 'ac' AND ac_id = ANY($1::text[])",
+              [acCodes]
+            );
+            numericIds.push(...recipients.rows.map((row) => row.id));
+          }
+
+          targetMlaIds = [...new Set(numericIds.map((value) => Number(value)).filter(Number.isInteger))];
+        }
+
+        if (targetMlaIds.length === 0) {
+          await pool.query('ROLLBACK');
+          // Purge orphaned file back off storage mirror if database validation falls through
+          await blob.delete().catch(() => {});
+          return res.status(400).json({ error: 'No valid AC recipients were selected.' });
+        }
+
+        // Insert mapping records into Junction table and trigger socket alert pings
+        const io = getIo();
+        const activeSockets = getActiveSockets();
+
+        for (let recipientId of targetMlaIds) {
+          await pool.query('INSERT INTO document_recipients (document_id, recipient_id) VALUES ($1, $2)', [document.id, recipientId]);
+          
+          const socketId = activeSockets.get(recipientId);
+          if (socketId) {
+            io.to(socketId).emit('new_notification', { message: `New Document Posted: ${title}`, document });
+          }
+        }
+
+        await pool.query('COMMIT');
+        res.status(201).json({ message: 'Document distributed successfully.', document });
+      } catch (dbErr) {
+        await pool.query('ROLLBACK');
+        await blob.delete().catch(() => {}); // Cleanup uploaded file if transaction fails
+        throw dbErr;
       }
+    });
 
-      targetMlaIds = [...new Set(numericIds.map((value) => Number(value)).filter(Number.isInteger))];
-    }
-
-    if (targetMlaIds.length === 0) {
-      await pool.query('ROLLBACK');
-      return res.status(400).json({ error: 'No valid AC recipients were selected.' });
-    }
-
-    // Insert mapping records into Junction table
-    const io = getIo();
-    const activeSockets = getActiveSockets();
-
-    for (let recipientId of targetMlaIds) {
-      await pool.query('INSERT INTO document_recipients (document_id, recipient_id) VALUES ($1, $2)', [document.id, recipientId]);
-      
-      // Dispatch real-time WebSocket Alert if recipient is actively online
-      const socketId = activeSockets.get(recipientId);
-      if (socketId) {
-        io.to(socketId).emit('new_notification', { message: `New Document Posted: ${title}`, document });
-      }
-    }
-
-    await pool.query('COMMIT');
-    res.status(201).json({ message: 'Document distributed successfully.', document });
+    blobStream.end(req.file.buffer);
   } catch (err) {
-    await pool.query('ROLLBACK');
+    console.error("Upload/Distribute Loop Failure: ", err.message);
     res.status(500).json({ error: err.message });
   }
 };
 
-// NEW: Fetch all uploaded documents for Admins and MLAs to view
+// NEW: Clean out deletion routine targeting both tracking rows and live Firebase storage files
+exports.deleteDocument = async (req, res) => {
+  const { docId } = req.params;
+  try {
+    const docLookup = await pool.query('SELECT firebase_storage_path FROM documents WHERE id = $1', [docId]);
+    
+    if (docLookup.rows.length === 0) {
+      return res.status(404).json({ error: 'Document not found in database records.' });
+    }
+
+    const { firebase_storage_path } = docLookup.rows[0];
+
+    // Step A: Evict the binary file asset off your Firebase Storage console
+    if (firebase_storage_path) {
+      await bucket.file(firebase_storage_path).delete().catch((err) => {
+        console.warn('File already cleared out or missing from Firebase Console bucket repository, moving to clean database records...', err.message);
+      });
+    }
+
+    // Step B: Cascade row elimination locally inside Postgres tracking maps
+    await pool.query('DELETE FROM documents WHERE id = $1', [docId]);
+
+    res.status(200).json({ success: true, message: 'Document cleanly purged from Firebase and database system metrics.' });
+  } catch (err) {
+    console.error("Delete Endpoint Runtime Error: ", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Fetch all uploaded documents for Admins and MLAs to view
 exports.getAvailableDocuments = async (req, res) => {
   try {
     const query = `
@@ -84,18 +156,13 @@ exports.getAvailableDocuments = async (req, res) => {
         id, 
         title, 
         file_type, 
+        file_path, -- Extends standard signed path references straight to your user downloads index 
         created_at 
       FROM documents 
       ORDER BY created_at DESC;
     `;
-    
     const result = await pool.query(query);
-    
-    res.status(200).json({
-      success: true,
-      count: result.rows.length,
-      documents: result.rows
-    });
+    res.status(200).json({ success: true, count: result.rows.length, documents: result.rows });
   } catch (err) {
     console.error("Fetch Documents Error:", err.message);
     res.status(500).json({ error: err.message });
@@ -123,14 +190,8 @@ exports.getDocumentDetailedMetrics = async (req, res) => {
         d.id AS document_id,
         d.title AS document_title,
         d.file_type,
-        
-        -- Metric 1: Total absolute download events across everyone
         COALESCE(COUNT(dl.id), 0)::INT AS total_download_count,
-        
-        -- Metric 2: Total unique people/MLAs who have downloaded it at least once
         COALESCE(COUNT(DISTINCT dl.mla_id), 0)::INT AS unique_people_downloaded,
-        
-        -- Metric 3: Sub-query generating an array of JSON objects containing each MLA's individual stats
         COALESCE(
           (
             SELECT json_agg(mla_breakdown)
@@ -149,13 +210,11 @@ exports.getDocumentDetailedMetrics = async (req, res) => {
           ), 
           '[]'::json
         ) AS each_mla_download_breakdown
-
       FROM documents d
       LEFT JOIN download_logs dl ON d.id = dl.document_id
       GROUP BY d.id
       ORDER BY d.created_at DESC;
     `;
-
     const result = await pool.query(query);
     res.status(200).json(result.rows);
   } catch (err) {
