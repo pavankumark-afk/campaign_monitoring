@@ -29,3 +29,13 @@ export const fetchAllACs = async () => {
     }))
     .filter((row) => Number.isInteger(row.id));
 };
+
+export const fetchMlaMonitorUsers = async () => {
+  const { data } = await apiClient.get('/mlas/monitor');
+  return Array.isArray(data) ? data : [];
+};
+
+export const updateMlaStatus = async (id, status) => {
+  const { data } = await apiClient.put(`/mlas/${id}/status`, { status });
+  return data;
+};

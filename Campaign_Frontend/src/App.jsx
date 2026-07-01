@@ -7,6 +7,7 @@ import Profile from './pages/Profile';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
 import MaterialUploads from './pages/superadmin/MaterialUploads';
 import MaterialDownloadStats from './pages/superadmin/MaterialDownloadStats';
+import UserManagement from './pages/superadmin/UserManagement';
 import AcDashboard from './pages/ac/AcDashboard';
 import AcMaterials from './pages/ac/AcMaterials';
 
@@ -31,6 +32,7 @@ export default function App() {
               <Route path="/admin" element={<SuperAdminDashboard />} />
               <Route path="/admin/material/uploads" element={<MaterialUploads />} />
               <Route path="/admin/material/downloads" element={<MaterialDownloadStats />} />
+              <Route path="/admin/users" element={<UserManagement />} />
               <Route path="/admin/profile" element={<Profile />} />
             </Route>
           </Route>

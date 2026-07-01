@@ -4,6 +4,7 @@ export const SUPER_ADMIN_NAV = [
   { to: '/admin', label: 'SIR Dashboard', icon: LayoutDashboard, end: true },
   { to: '/admin/material/uploads', label: 'Material Uploads', icon: UploadCloud },
   { to: '/admin/material/downloads', label: 'Download Stats', icon: DownloadCloud },
+  { to: '/admin/users', label: 'User Management', icon: UserCircle },
   { to: '/admin/profile', label: 'Profile', icon: UserCircle },
 ];
 
