@@ -1,4 +1,4 @@
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatNumber, formatDate } from '../../utils/format';
 
 export default function TrendChart({ data }) {
@@ -8,13 +8,7 @@ export default function TrendChart({ data }) {
   return (
     <div style={{ width: '100%', height: 240 }}>
       <ResponsiveContainer>
-        <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-          <defs>
-            <linearGradient id="contactedFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#0B3D2E" stopOpacity={0.32} />
-              <stop offset="100%" stopColor="#0B3D2E" stopOpacity={0.02} />
-            </linearGradient>
-          </defs>
+        <BarChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
           <CartesianGrid stroke="#DDD8CC" vertical={false} />
           <XAxis
             dataKey="date"
@@ -35,8 +29,8 @@ export default function TrendChart({ data }) {
             labelFormatter={(d) => formatDate(d)}
             contentStyle={{ fontSize: 13, borderRadius: 6, border: '1px solid #DDD8CC' }}
           />
-          <Area type="monotone" dataKey="contacted" stroke="#0B3D2E" strokeWidth={2} fill="url(#contactedFill)" />
-        </AreaChart>
+          <Bar dataKey="contacted" fill="#0B3D2E" radius={[6, 6, 0, 0]} />
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );

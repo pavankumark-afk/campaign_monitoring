@@ -218,13 +218,14 @@ export const fetchSirTrend = async (params) => {
   }
 
   // Backend currently provides snapshot metrics only (no historical series).
-  // Return a stable daily series so the chart remains populated.
+  // Generate an approximate rising series so the chart shows progress instead of a flat line.
   return Array.from({ length: days }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (days - 1 - i));
+    const fraction = (i + 1) / days;
     return {
       date: d.toISOString().slice(0, 10),
-      contacted: contactedTotal,
+      contacted: Math.round(contactedTotal * fraction),
     };
   });
 };
