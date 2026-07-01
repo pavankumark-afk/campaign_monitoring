@@ -17,18 +17,12 @@ export default function TallyStrip({ rows, segments = 20 }) {
         } else if (pct >= 1) {
           pctLabel = `${Math.round(pct)}%`;
         }
-        const computedSegments = Math.round((pct / 100) * segments);
-        const filledSegments = pct > 0 ? Math.max(1, computedSegments) : 0;
+
         return (
           <div className="tally__row" key={row.label}>
             <span className="tally__label" title={row.label}>{row.label}</span>
-            <div className="tally__track" aria-label={`${row.label}: ${pctLabel} complete`}>
-              {Array.from({ length: segments }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`tally__segment ${i < filledSegments ? 'tally__segment--filled' : ''}`}
-                />
-              ))}
+            <div className="tally__track tally__track--lined" aria-label={`${row.label}: ${pctLabel} complete`}>
+              <div className="tally__fill" style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }} />
             </div>
             <span className="tally__pct">{pctLabel}</span>
           </div>

@@ -102,7 +102,7 @@ export default function SuperAdminDashboard() {
               placeholder="Search AC…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ paddingLeft: 32, padding: '8px 12px 8px 32px', border: '1px solid var(--color-border-strong)', borderRadius: 6, fontSize: 13, width: 200 }}
+              style={{ paddingLeft: 32, padding: '8px 12px 8px 32px', border: '1px solid var(--color-border-strong)', borderRadius: 6, fontSize: 13, width: 200, maxWidth: '100%' }}
             />
           </div>
         }

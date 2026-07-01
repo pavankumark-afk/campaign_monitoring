@@ -183,19 +183,32 @@
 
 .tally__track {
   flex: 1;
-  display: flex;
-  gap: 2px;
-  height: 16px;
+  position: relative;
+  height: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: linear-gradient(90deg, #EAE6DA 0%, #EAE6DA 100%);
+}
+.tally__track--lined {
+  /* subtle vertical tick marks across the track */
+  background-image: repeating-linear-gradient(
+    to right,
+    rgba(0,0,0,0.06) 0,
+    rgba(0,0,0,0.06) 2px,
+    transparent 2px,
+    transparent 24px
+  );
+  background-color: #EAE6DA;
 }
 
-.tally__segment {
-  flex: 1;
-  background: #EAE6DA;
-  border-radius: 1px;
-}
-
-.tally__segment--filled {
+.tally__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
   background: var(--color-ink);
+  transition: width 400ms cubic-bezier(.2,.9,.2,1);
 }
 
 .tally__pct {
