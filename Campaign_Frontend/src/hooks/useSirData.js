@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { fetchSirSummary, fetchAcBreakdown, fetchBoothBreakdown, fetchSirTrend } from '../api/sir';
+import { fetchSirSummary, fetchAcBreakdown, fetchBoothBreakdown, fetchSirTrend, fetchPcBreakdown } from '../api/sir';
 import {
   USE_MOCKS,
   mockSirSummary,
   mockAcBreakdown,
   mockBoothBreakdown,
+  mockPcBreakdown,
   mockSirTrend,
 } from '../api/mockData';
 
@@ -45,6 +46,14 @@ export function useAcBreakdown() {
     () => (USE_MOCKS ? Promise.resolve(mockAcBreakdown()) : fetchAcBreakdown()),
     [],
     USE_MOCKS ? () => mockAcBreakdown() : null
+  );
+}
+
+export function usePcBreakdown() {
+  return useAsync(
+    () => (USE_MOCKS ? Promise.resolve(mockPcBreakdown()) : fetchPcBreakdown()),
+    [],
+    USE_MOCKS ? () => mockPcBreakdown() : null
   );
 }
 

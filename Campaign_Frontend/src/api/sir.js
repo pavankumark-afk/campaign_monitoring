@@ -176,6 +176,20 @@ export const fetchAcBreakdown = async () => {
   }));
 };
 
+export const fetchPcBreakdown = async () => {
+  const rows = await fetchHierarchicalRows();
+
+  return rows
+    .filter((pc) => pc?.parliament_no != null)
+    .map((pc) => ({
+      pcId: String(pc.parliament_no),
+      pcName: `PC ${pc.parliament_no}`,
+      totalElectors: toNumber(pc?.total_voters),
+      contacted: toNumber(pc?.contacted_count),
+      pending: toNumber(pc?.remaining_count),
+    }));
+};
+
 export const fetchBoothBreakdown = async (acId) => {
   void acId;
   return [];

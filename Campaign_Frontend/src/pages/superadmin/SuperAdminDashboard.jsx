@@ -1,18 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { RefreshCw, Search } from 'lucide-react';
 import Card from '../../components/common/Card';
 import StatTile from '../../components/common/StatTile';
 import TallyStrip from '../../components/common/TallyStrip';
-import { useSirSummary, useAcBreakdown, useSirTrend } from '../../hooks/useSirData';
+import { useSirSummary, useAcBreakdown, usePcBreakdown, useSirTrend } from '../../hooks/useSirData';
 import { formatNumber, formatPercent, formatRelativeTime } from '../../utils/format';
 import TrendChart from '../../components/charts/TrendChart';
 
 export default function SuperAdminDashboard() {
   const { data: summary, isLoading: summaryLoading, error: summaryError, reload } = useSirSummary('super_admin');
   const { data: breakdown, isLoading: breakdownLoading, error: breakdownError } = useAcBreakdown();
+  const { data: pcBreakdown, isLoading: pcLoading, error: pcError } = usePcBreakdown();
   const { data: trend, error: trendError } = useSirTrend('super_admin', null, 14);
   const [search, setSearch] = useState('');
-  const dashboardError = summaryError || breakdownError || trendError;
+  const dashboardError = summaryError || breakdownError || pcError || trendError;
 
   const filtered = useMemo(() => {
     if (!breakdown) return [];
@@ -27,6 +28,18 @@ export default function SuperAdminDashboard() {
   }, [breakdown, search]);
 
   const topRows = filtered.slice(0, 12).map((r) => ({ label: r.acName, done: r.contacted, total: r.totalElectors }));
+  const pcRows = (pcBreakdown || [])
+    .slice()
+    .sort((a, b) => b.contacted / b.totalElectors - a.contacted / a.totalElectors)
+    .map((pc) => ({
+      id: pc.pcId,
+      label: pc.pcName,
+      done: pc.contacted,
+      total: pc.totalElectors,
+      pct: pc.totalElectors > 0 ? (pc.contacted / pc.totalElectors) * 100 : 0,
+    }));
+
+  const pcCards = pcRows.slice(0, 25);
 
   return (
     <div>
@@ -107,6 +120,39 @@ export default function SuperAdminDashboard() {
             {filtered.length > 12 && (
               <p style={{ marginTop: 12, fontSize: 13, color: 'var(--color-text-muted)' }}>
                 Showing 12 of {filtered.length} ACs needing the most attention. Use search to find a specific one.
+              </p>
+            )}
+          </>
+        )}
+      </Card>
+
+      <Card title="PC-wise progress" subtitle="Top 25 parliamentary constituencies by completion">
+        {pcLoading ? (
+          <p style={{ color: 'var(--color-text-muted)' }}>Loading PC breakdown…</p>
+        ) : pcRows.length === 0 ? (
+          <div className="empty-state">
+            <h4>No PC data yet</h4>
+            <p>PC metrics will appear here once the hierarchical response includes them.</p>
+          </div>
+        ) : (
+          <>
+            <div className="pc-card-grid">
+              {pcCards.map((pc) => (
+                <div className="pc-card" key={pc.id}>
+                  <div className="pc-card__header">
+                    <span>{pc.label}</span>
+                    <strong>{Math.round(pc.pct)}%</strong>
+                  </div>
+                  <div className="pc-card__body">
+                    <span>{pc.done.toLocaleString()} contacted</span>
+                    <span>{pc.total.toLocaleString()} electors</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {pcRows.length > 25 && (
+              <p style={{ marginTop: 12, fontSize: 13, color: 'var(--color-text-muted)' }}>
+                Showing 25 of {pcRows.length} PCs.
               </p>
             )}
           </>

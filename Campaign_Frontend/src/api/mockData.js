@@ -52,6 +52,22 @@ export function mockAcBreakdown() {
   }));
 }
 
+export function mockPcBreakdown() {
+  const pcs = Array.from({ length: 20 }, (_, i) => {
+    const totalElectors = 180000 + Math.floor(Math.random() * 120000);
+    const contacted = Math.floor(totalElectors * (0.22 + Math.random() * 0.55));
+    return {
+      pcId: String(i + 1),
+      pcName: `PC ${i + 1}`,
+      totalElectors,
+      contacted,
+      pending: totalElectors - contacted,
+    };
+  });
+
+  return pcs;
+}
+
 export function mockBoothBreakdown(acId) {
   const ac = ACS.find((a) => a.id === acId) || ACS[0];
   return Array.from({ length: 18 }, (_, i) => {
