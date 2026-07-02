@@ -14,11 +14,11 @@ exports.useCache = (customTTL) => {
     const cachedBody = cache.get(cacheKey);
 
     if (cachedBody) {
-      console.log(`⚡ Cache Hit for key: ${cacheKey}`);
+      console.log(`Cache Hit for key: ${cacheKey}`);
       return res.status(200).json(cachedBody);
     }
 
-    console.log(`🐘 Cache Miss for key: ${cacheKey}. Fetching fresh database layout...`);
+    console.log(`Cache Miss for key: ${cacheKey}. Fetching fresh database layout...`);
 
     // Intercept res.json to catch the database payload before it leaves the server
     const originalJson = res.json;

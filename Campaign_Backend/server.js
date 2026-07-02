@@ -10,6 +10,7 @@ const authRoutes = require('./routes/authRoutes');
 const mlaRoutes = require('./routes/mlaRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const voterRoutes = require('./routes/voterRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -28,6 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/mlas', mlaRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/voters', voterRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
