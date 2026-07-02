@@ -1,7 +1,8 @@
-import { LayoutDashboard, UploadCloud, DownloadCloud, FolderOpen, UserCircle } from 'lucide-react';
+import { LayoutDashboard, UploadCloud, DownloadCloud, FolderOpen, UserCircle, Activity } from 'lucide-react';
 
 export const SUPER_ADMIN_NAV = [
   { to: '/admin', label: 'SIR Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/admin/user-activity', label: 'Activity Metrics', icon: Activity },
   { to: '/admin/material/uploads', label: 'Material Uploads', icon: UploadCloud },
   { to: '/admin/material/downloads', label: 'Download Stats', icon: DownloadCloud },
   { to: '/admin/users', label: 'User Management', icon: UserCircle },
@@ -10,6 +11,7 @@ export const SUPER_ADMIN_NAV = [
 
 export const AC_NAV = [
   { to: '/ac', label: 'SIR Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/ac/user-activity', label: 'Activity Metrics', icon: Activity },
   { to: '/ac/material', label: 'Material', icon: FolderOpen },
   { to: '/ac/profile', label: 'Profile', icon: UserCircle },
 ];

@@ -5,6 +5,7 @@ import AppShell from './components/layout/AppShell';
 import Login from './pages/auth/Login';
 import Profile from './pages/Profile';
 import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
+import UserActivityMetrics from './pages/superadmin/UserActivityMetrics';
 import MaterialUploads from './pages/superadmin/MaterialUploads';
 import MaterialDownloadStats from './pages/superadmin/MaterialDownloadStats';
 import UserManagement from './pages/superadmin/UserManagement';
@@ -30,6 +31,7 @@ export default function App() {
           <Route element={<ProtectedRoute allow={['super_admin']} />}>
             <Route element={<AppShell />}>
               <Route path="/admin" element={<SuperAdminDashboard />} />
+              <Route path="/admin/user-activity" element={<UserActivityMetrics />} />
               <Route path="/admin/material/uploads" element={<MaterialUploads />} />
               <Route path="/admin/material/downloads" element={<MaterialDownloadStats />} />
               <Route path="/admin/users" element={<UserManagement />} />
@@ -41,6 +43,7 @@ export default function App() {
           <Route element={<ProtectedRoute allow={['ac', 'mla']} />}>
             <Route element={<AppShell />}>
               <Route path="/ac" element={<AcDashboard />} />
+              <Route path="/ac/user-activity" element={<UserActivityMetrics />} />
               <Route path="/ac/material" element={<AcMaterials />} />
               <Route path="/ac/profile" element={<Profile />} />
             </Route>
