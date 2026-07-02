@@ -97,10 +97,13 @@ async function fetchMlaSelfMetrics() {
 function flattenAcRows(rows) {
   return rows.flatMap((pc) => {
     const parliamentNo = pc?.parliament_no;
+    const parliamentName = String(pc?.parliament_name ?? '').trim();
     const acs = Array.isArray(pc?.acs) ? pc.acs : [];
     return acs.map((ac) => ({
       parliamentNo,
+      parliamentName,
       acNo: ac?.ac_no,
+      acName: String(ac?.ac_name ?? '').trim(),
       totalElectors: toNumber(ac?.total_voters),
       contacted: toNumber(ac?.contacted_count),
       pending: toNumber(ac?.remaining_count),
@@ -167,13 +170,21 @@ export const fetchAcBreakdown = async () => {
   const rows = await fetchHierarchicalRows();
   const acRows = flattenAcRows(rows);
 
-  return acRows.map((row) => ({
-    acId: formatAcId(row.acNo),
-    acName: `AC ${row.acNo} (PC ${row.parliamentNo})`,
-    totalElectors: row.totalElectors,
-    contacted: row.contacted,
-    pending: row.pending,
-  }));
+  return acRows.map((row) => {
+    const acName = row.acName || `AC ${row.acNo}`;
+    const parliamentName = row.parliamentName;
+    const displayName = parliamentName ? `${acName} (${parliamentName})` : acName;
+
+    return {
+      acId: formatAcId(row.acNo),
+      acName: displayName,
+      pcId: row.parliamentNo != null ? String(row.parliamentNo) : '',
+      pcName: parliamentName || '',
+      totalElectors: row.totalElectors,
+      contacted: row.contacted,
+      pending: row.pending,
+    };
+  });
 };
 
 export const fetchPcBreakdown = async () => {
@@ -183,7 +194,7 @@ export const fetchPcBreakdown = async () => {
     .filter((pc) => pc?.parliament_no != null)
     .map((pc) => ({
       pcId: String(pc.parliament_no),
-      pcName: `PC ${pc.parliament_no}`,
+      pcName: String(pc?.parliament_name ?? '').trim() || `PC ${pc.parliament_no}`,
       totalElectors: toNumber(pc?.total_voters),
       contacted: toNumber(pc?.contacted_count),
       pending: toNumber(pc?.remaining_count),

@@ -41,6 +41,15 @@ export default function SuperAdminDashboard() {
 
   const pcCards = pcRows.slice(0, 25);
 
+  const [pcModal, setPcModal] = useState(null); // { id, name, acs }
+
+  const acListByPc = (breakdown || []).reduce((acc, ac) => {
+    const pcId = ac.pcId || (ac.acName && (ac.acName.match(/PC\s*(\d+)/i) || [])[1]) || '';
+    if (!acc[pcId]) acc[pcId] = [];
+    acc[pcId].push(ac);
+    return acc;
+  }, {});
+
   return (
     <div>
       <div className="page-header">
@@ -138,7 +147,15 @@ export default function SuperAdminDashboard() {
           <>
             <div className="pc-card-grid">
               {pcCards.map((pc) => (
-                <div className="pc-card" key={pc.id}>
+                <div
+                  className="pc-card"
+                  key={pc.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setPcModal({ id: pc.id, name: pc.label, acs: acListByPc[pc.id] || [] })}
+                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setPcModal({ id: pc.id, name: pc.label, acs: acListByPc[pc.id] || [] })}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="pc-card__header">
                     <span>{pc.label}</span>
                     <strong>{Math.round(pc.pct)}%</strong>
@@ -158,6 +175,50 @@ export default function SuperAdminDashboard() {
           </>
         )}
       </Card>
+      {pcModal && <PcModal payload={pcModal} onClose={() => setPcModal(null)} />}
+    </div>
+  );
+}
+
+function PcModal({ payload, onClose }) {
+  const { id, name, acs } = payload;
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal__header">
+          <h3>{name}</h3>
+          <button className="btn btn--ghost btn--icon btn--sm" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <div className="modal__body">
+          <p className="field-hint" style={{ marginBottom: 14 }}>
+            {acs.length} AC{acs.length !== 1 ? 's' : ''} in this parliamentary constituency.
+          </p>
+
+          <div style={{ maxHeight: '50vh', overflow: 'auto' }}>
+            <div className="data-table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr><th>AC</th><th className="data-table__numeric">Contacted</th><th className="data-table__numeric">Electors</th></tr>
+                </thead>
+                <tbody>
+                  {(acs || [])
+                    .slice()
+                    .sort((a, b) => b.contacted / b.totalElectors - a.contacted / a.totalElectors)
+                    .map((ac) => (
+                      <tr key={ac.acId}>
+                        <td style={{ fontWeight: 600 }}>{ac.acName}</td>
+                        <td className="data-table__numeric">{ac.contacted.toLocaleString()}</td>
+                        <td className="data-table__numeric">{ac.totalElectors.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
