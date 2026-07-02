@@ -7,35 +7,41 @@ exports.getNestedCampaignMetrics = async (req, res) => {
         -- Step 1: Calculate total and contacted metrics per AC
         SELECT 
           parliament_no,
+          parliament_name,
           ac_no,
+          ac_name,
           COUNT(*)::INT AS total_voters,
           COUNT(*) FILTER (WHERE contact_status = 'contacted')::INT AS contacted_count,
           ROUND(
             (COUNT(*) FILTER (WHERE contact_status = 'contacted') * 100.0) / NULLIF(COUNT(*), 0), 2
           )::FLOAT AS contacted_percentage
-        FROM public.voters
-        GROUP BY parliament_no, ac_no
+        FROM public.mv_voters_master
+        GROUP BY parliament_no, parliament_name, ac_no, ac_name
       ),
       pc_metrics AS (
         -- Step 2: Calculate total and contacted metrics per PC
         SELECT 
           parliament_no,
+          parliament_name,
           COUNT(*)::INT AS total_voters,
           COUNT(*) FILTER (WHERE contact_status = 'contacted')::INT AS contacted_count,
           ROUND(
             (COUNT(*) FILTER (WHERE contact_status = 'contacted') * 100.0) / NULLIF(COUNT(*), 0), 2
           )::FLOAT AS contacted_percentage
-        FROM public.voters
-        GROUP BY parliament_no
+        FROM public.mv_voters_master
+        GROUP BY parliament_no, parliament_name
       ),
       aggregated_acs AS (
         -- Step 3: Bundle ACs into their JSON arrays safely *before* joining them to the PCs
+        -- FIX: Added parliament_name to GROUP BY to satisfy Postgres execution constraints
         SELECT 
           parliament_no,
+          parliament_name,
           COALESCE(
             json_agg(
               json_build_object(
                 'ac_no', ac_no,
+                'ac_name', ac_name,
                 'total_voters', total_voters,
                 'contacted_count', contacted_count,
                 'contacted_percentage', contacted_percentage,
@@ -45,12 +51,13 @@ exports.getNestedCampaignMetrics = async (req, res) => {
             ), '[]'::json
           ) AS acs_list
         FROM ac_metrics
-        GROUP BY parliament_no
+        GROUP BY parliament_no, parliament_name
       )
       
-      -- Step 4: Assemble the final nested response cleanly without massive GROUP BY requirements
+      -- Step 4: Assemble final nested response cleanly
       SELECT 
         pc.parliament_no,
+        pc.parliament_name, -- Added to final payload view
         pc.total_voters,
         pc.contacted_count,
         pc.contacted_percentage,
@@ -94,15 +101,17 @@ exports.getMlaSelfAcMetrics = async (req, res) => {
       SELECT 
         $1::VARCHAR AS mla_name,
         parliament_no AS pc_id,
+        parliament_name AS pc_name, -- Grab name for contextual rendering
         ac_no AS ac_id,
+        ac_name,
         COUNT(*)::INT AS total_voters,
         COUNT(*) FILTER (WHERE contact_status = 'contacted')::INT AS contacted_count,
         ROUND(
           (COUNT(*) FILTER (WHERE contact_status = 'contacted') * 100.0) / NULLIF(COUNT(*), 0), 2
         )::FLOAT AS contacted_percentage
-      FROM public.voters
+      FROM public.mv_voters_master
       WHERE parliament_no = $2 AND ac_no = $3
-      GROUP BY parliament_no, ac_no;
+      GROUP BY parliament_no, parliament_name, ac_no, ac_name;
     `;
 
     const metricsResult = await pool.query(metricsQuery, [name, pc_id, ac_id]);
@@ -111,7 +120,9 @@ exports.getMlaSelfAcMetrics = async (req, res) => {
       return res.status(200).json({
         mla_name: name,
         pc_id: pc_id,
+        pc_name: "",
         ac_id: ac_id,
+        ac_name: "",
         total_voters: 0,
         contacted_count: 0,
         contacted_percentage: 0.00,
@@ -134,7 +145,9 @@ exports.getMlaSelfAcMetrics = async (req, res) => {
     res.status(200).json({
       mla_name: data.mla_name,
       pc_id: data.pc_id,
+      pc_name: data.pc_name,
       ac_id: data.ac_id,
+      ac_name: data.ac_name,
       total_voters: totalVoters,
       contacted_count: contactedCount,
       contacted_percentage: data.contacted_percentage,
