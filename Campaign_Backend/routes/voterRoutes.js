@@ -17,7 +17,7 @@ router.get(
 // GET /api/voters/metrics/my-constituency
 router.get(
   '/metrics/my-constituency',
-  authorize('mla'), useCache(60),   // 1 minutes cache
+  authorize('mla'), useCache(300),   // 5 minutes cache
   voterController.getMlaSelfAcMetrics
 );
 
