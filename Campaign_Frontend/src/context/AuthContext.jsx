@@ -43,12 +43,29 @@ export function AuthProvider({ children }) {
     setIsLoading(false);
   }, []);
 
-  const login = useCallback(async (username, password) => {
+  const login = useCallback(async (usernameOrProfile, password) => {
     setError(null);
-    const data = await loginApi(username, password);
+
+    // If caller passes a profile object (OTP verify path), accept it directly
+    if (usernameOrProfile && typeof usernameOrProfile === 'object') {
+      const data = usernameOrProfile;
+      const profile = {
+        id: data.id ?? data.user_id ?? data.user?.id,
+        name: data.name ?? data.user?.name ?? null,
+        role: data.role ?? data.user?.role ?? null,
+        acId: data.ac_id ?? data.user?.ac_id ?? null,
+        acName: data.ac_name ?? data.user?.ac_name ?? null,
+      };
+      localStorage.setItem(USER_KEY, JSON.stringify(profile));
+      setUser(profile);
+      return profile;
+    }
+
+    // Fallback to legacy username/password flow
+    const data = await loginApi(usernameOrProfile, password);
 
     const profile = {
-      id: data.id ?? data.user_id ?? username,
+      id: data.id ?? data.user_id ?? usernameOrProfile,
       name: data.name,
       role: data.role,
       acId: data.ac_id ?? null,

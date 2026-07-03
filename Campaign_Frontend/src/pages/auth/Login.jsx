@@ -1,37 +1,60 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { requestOtp, verifyOtp } from '../../api/auth';
 import './Login.css';
 
 export default function Login() {
   const { login } = useAuth();
-  const [showPassword, setShowPassword] = useState(false);
+  const [step, setStep] = useState('request'); // 'request' | 'verify'
   const navigate = useNavigate();
   const location = useLocation();
 
   const [mobile, setMobile] = useState('');
-  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleRequestOtp = async (e) => {
+    e && e.preventDefault();
     setError('');
-    setIsSubmitting(true);
+    setIsSendingOtp(true);
     try {
-      const profile = await login(mobile.trim(), password);
+      await requestOtp(mobile.trim());
+      setStep('verify');
+    } catch (err) {
+      setError(err?.message || 'Unable to request OTP');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e && e.preventDefault();
+    setError('');
+    setIsVerifyingOtp(true);
+    try {
+      const res = await verifyOtp(mobile.trim(), otp.trim());
+      // Backend returns { status: 'success', data: { user: {...} } }
+      const userData = res?.data?.user || res?.user || res;
+      const profile = {
+        id: userData.id,
+        name: userData.name,
+        role: userData.role,
+        acId: userData.ac_id ?? userData.acId ?? null,
+        acName: userData.ac_name ?? null,
+      };
+      await login(profile);
       const from = location.state?.from?.pathname;
       const home = profile.role === 'super_admin' ? '/admin' : '/ac';
       navigate(from && from !== '/login' ? from : home, { replace: true });
     } catch (err) {
-      const msg =
-        err?.response?.data?.error ||
-        err?.message ||
-        'Invalid mobile or password. Please try again.';
-      setError(msg);
+      setError(err?.message || 'OTP verification failed');
     } finally {
-      setIsSubmitting(false);
+      setIsVerifyingOtp(false);
     }
   };
 
@@ -47,7 +70,7 @@ export default function Login() {
 
         {error && <div className="login__error">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={step === 'request' ? handleRequestOtp : handleVerifyOtp}>
           <div className="field">
             <label htmlFor="mobile">Mobile Number</label>
             <input
@@ -58,34 +81,37 @@ export default function Login() {
               onChange={(e) => setMobile(e.target.value)}
               required
               placeholder="e.g. 9876543210"
+              disabled={step === 'verify'}
             />
           </div>
-          <div className="field field--password">
-            <label htmlFor="password">Password</label>
-            <div className="field__password-wrap">
+
+          {step === 'verify' && (
+            <div className="field">
+              <label htmlFor="otp">One-time passcode</label>
               <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                id="otp"
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
                 required
-                placeholder="••••••••"
+                placeholder="Enter 6-digit code"
+                inputMode="numeric"
+                maxLength={6}
               />
-              <button
-                type="button"
-                className="btn btn--icon field__password-toggle"
-                onClick={() => setShowPassword((prev) => !prev)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
             </div>
-          </div>
-          <button type="submit" className="btn btn--primary login__submit" disabled={isSubmitting}>
-            {isSubmitting ? <Loader2 size={16} className="spin" /> : null}
-            {isSubmitting ? 'Signing in…' : 'Sign in'}
-          </button>
+          )}
+
+          {step === 'request' ? (
+            <button type="submit" className="btn btn--primary login__submit" disabled={isSendingOtp}>
+              {isSendingOtp ? <Loader2 size={16} className="spin" /> : null}
+              {isSendingOtp ? 'Sending…' : 'Send OTP'}
+            </button>
+          ) : (
+            <button type="submit" className="btn btn--primary login__submit" disabled={isVerifyingOtp}>
+              {isVerifyingOtp ? <Loader2 size={16} className="spin" /> : null}
+              {isVerifyingOtp ? 'Verifying…' : 'Verify & Sign in'}
+            </button>
+          )}
         </form>
 
         <p className="login__footnote">Trouble logging in? Contact your district coordinator.</p>
