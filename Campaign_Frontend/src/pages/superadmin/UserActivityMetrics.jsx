@@ -23,7 +23,7 @@ export default function UserActivityMetrics() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchUserActivityMetrics();
+      const data = await fetchUserActivityMetrics({ role: user?.role });
       setMetrics(data);
     } catch (err) {
       setError(err?.response?.data?.error || err?.message || 'Unable to load activity metrics');
@@ -31,7 +31,7 @@ export default function UserActivityMetrics() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.role]);
 
   useEffect(() => {
     loadMetrics();
@@ -121,9 +121,16 @@ export default function UserActivityMetrics() {
 
       <div className="stat-grid page-section">
         <StatTile label="Total registered users" value={isLoading ? '—' : metrics?.total_registered_users ?? '—'} />
-        <StatTile label="Active today" value={isLoading ? '—' : metrics?.total_active_today ?? '—'} />
-        <StatTile label="PC breakdown" value={isLoading ? '—' : pcBreakdown.length} />
-        <StatTile label="AC breakdown" value={isLoading ? '—' : acBreakdown.length} />
+        <StatTile
+          label="Active today"
+          value={isLoading ? '—' : isAC ? acOnlyDetails.length : metrics?.total_active_today ?? '—'}
+        />
+        {!isAC && (
+          <>
+            <StatTile label="PC breakdown" value={isLoading ? '—' : pcBreakdown.length} />
+            <StatTile label="AC breakdown" value={isLoading ? '—' : acBreakdown.length} />
+          </>
+        )}
       </div>
 
       <div className="page-section">
@@ -185,65 +192,67 @@ export default function UserActivityMetrics() {
         </Card>
       </div>
 
-      <div className="page-section" style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
-        <Card title="PC-level logins" subtitle="Active users grouped by parliamentary constituency">
-          {isLoading ? (
-            <p style={{ color: 'var(--color-text-muted)' }}>Loading PC breakdown…</p>
-          ) : pcBreakdown.length === 0 ? (
-            <p style={{ color: 'var(--color-text-muted)' }}>No PC login data available.</p>
-          ) : (
-            <div className="data-table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>PC</th>
-                    <th className="data-table__numeric">Total users</th>
-                    <th className="data-table__numeric">Active today</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pcBreakdown.map((row) => (
-                    <tr key={row.pc_name}>
-                      <td>{row.pc_name}</td>
-                      <td className="data-table__numeric">{row.total_users}</td>
-                      <td className="data-table__numeric">{row.active_today}</td>
+      {!isAC && (
+        <div className="page-section" style={{ display: 'grid', gap: 20, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+          <Card title="PC-level logins" subtitle="Active users grouped by parliamentary constituency">
+            {isLoading ? (
+              <p style={{ color: 'var(--color-text-muted)' }}>Loading PC breakdown…</p>
+            ) : pcBreakdown.length === 0 ? (
+              <p style={{ color: 'var(--color-text-muted)' }}>No PC login data available.</p>
+            ) : (
+              <div className="data-table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>PC</th>
+                      <th className="data-table__numeric">Total users</th>
+                      <th className="data-table__numeric">Active today</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
+                  </thead>
+                  <tbody>
+                    {pcBreakdown.map((row) => (
+                      <tr key={row.pc_name}>
+                        <td>{row.pc_name}</td>
+                        <td className="data-table__numeric">{row.total_users}</td>
+                        <td className="data-table__numeric">{row.active_today}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
 
-        <Card title="AC-level logins" subtitle="Active users grouped by assembly constituency">
-          {isLoading ? (
-            <p style={{ color: 'var(--color-text-muted)' }}>Loading AC breakdown…</p>
-          ) : acBreakdown.length === 0 ? (
-            <p style={{ color: 'var(--color-text-muted)' }}>No AC login data available.</p>
-          ) : (
-            <div className="data-table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>AC</th>
-                    <th className="data-table__numeric">Total users</th>
-                    <th className="data-table__numeric">Active today</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {acBreakdown.map((row) => (
-                    <tr key={row.ac_name}>
-                      <td>{row.ac_name}</td>
-                      <td className="data-table__numeric">{row.total_users}</td>
-                      <td className="data-table__numeric">{row.active_today}</td>
+          <Card title="AC-level logins" subtitle="Active users grouped by assembly constituency">
+            {isLoading ? (
+              <p style={{ color: 'var(--color-text-muted)' }}>Loading AC breakdown…</p>
+            ) : acBreakdown.length === 0 ? (
+              <p style={{ color: 'var(--color-text-muted)' }}>No AC login data available.</p>
+            ) : (
+              <div className="data-table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>AC</th>
+                      <th className="data-table__numeric">Total users</th>
+                      <th className="data-table__numeric">Active today</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
-      </div>
+                  </thead>
+                  <tbody>
+                    {acBreakdown.map((row) => (
+                      <tr key={row.ac_name}>
+                        <td>{row.ac_name}</td>
+                        <td className="data-table__numeric">{row.total_users}</td>
+                        <td className="data-table__numeric">{row.active_today}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
