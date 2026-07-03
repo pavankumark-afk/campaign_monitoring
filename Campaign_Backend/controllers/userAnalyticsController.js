@@ -29,7 +29,7 @@ exports.getLoginAndActivityMetrics = async (req, res) => {
         COALESCE(
           (SELECT json_agg(pc_g) FROM (
              SELECT 
-               pc.pc_name AS pc_name, -- 🌟 Fallback fix if standard 'name' column is explicitly 'pc_name'
+               pc.pc_name AS pc_name, -- Fallback fix if standard 'name' column is explicitly 'pc_name'
                COUNT(ua.id)::INT AS total_users,
                COALESCE(SUM(ua.logged_in_today), 0)::INT AS active_today
              FROM public.parliamentary_constituencies pc
@@ -43,7 +43,7 @@ exports.getLoginAndActivityMetrics = async (req, res) => {
         COALESCE(
           (SELECT json_agg(ac_g) FROM (
              SELECT 
-               ac.ac_name AS ac_name, -- 🌟 Fallback fix if standard 'name' column is explicitly 'ac_name'
+               ac.ac_name AS ac_name, -- Fallback fix if standard 'name' column is explicitly 'ac_name'
                COUNT(ua.id)::INT AS total_users,
                COALESCE(SUM(ua.logged_in_today), 0)::INT AS active_today
              FROM public.assembly_constituencies ac
@@ -71,6 +71,89 @@ exports.getLoginAndActivityMetrics = async (req, res) => {
     res.status(200).json(result.rows[0]);
   } catch (err) {
     console.error("User Login Tracking API Error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getMlaLoginAndActivityMetrics = async (req, res) => {
+  const mlaId = req.mla.id; // Extracted from authMiddleware
+
+  try {
+    // Step 1: Fetch the specific constituency assignments for this MLA
+    const mlaProfile = await pool.query(
+      'SELECT id, name, pc_id, ac_id FROM mlas WHERE id = $1', 
+      [mlaId]
+    );
+
+    if (mlaProfile.rows.length === 0) {
+      return res.status(404).json({ error: 'MLA Profile not found.' });
+    }
+
+    const { pc_id, ac_id, name: mla_name } = mlaProfile.rows[0];
+
+    // Step 2: Run the scoped analytics query
+    const query = `
+      WITH active_user_footprints AS (
+        -- Track activity across refresh tokens and voter modifications today
+        SELECT user_id AS uid FROM public.refresh_tokens
+          WHERE created_at >= CURRENT_DATE AND created_at < CURRENT_DATE + INTERVAL '1 day'
+        UNION
+        SELECT bla_updated_by AS uid FROM public.voters
+          WHERE bla_updated_at >= CURRENT_DATE AND bla_updated_at < CURRENT_DATE + INTERVAL '1 day'
+      ),
+      user_activity AS (
+        -- Scope user base strictly to this MLA's assigned AC and PC
+        SELECT 
+          u.id,
+          CASE WHEN auf.uid IS NOT NULL THEN 1 ELSE 0 END AS logged_in_today
+        FROM public.users u
+        LEFT JOIN active_user_footprints auf ON u.id = auf.uid
+        WHERE u.is_active = 1 
+          AND u.assigned_pc_id = $1 
+          AND u.assigned_ac_id = $2
+      )
+      SELECT
+        $3::VARCHAR AS mla_name,
+        
+        -- Metric 1: Constituency Totals
+        (SELECT COUNT(*)::INT FROM user_activity) AS total_registered_users,
+        (SELECT SUM(logged_in_today)::INT FROM user_activity) AS total_active_today,
+        
+        -- Metric 2: Specific Constituency Target Card Detail
+        COALESCE(
+          (SELECT json_build_object(
+             'ac_name', ac.ac_name,
+             'total_users', COUNT(ua.id)::INT,
+             'active_today', COALESCE(SUM(ua.logged_in_today), 0)::INT
+           )
+           FROM public.assembly_constituencies ac
+           LEFT JOIN user_activity ua ON ac.id = $2
+           WHERE ac.id = $2
+           GROUP BY ac.ac_name
+          ), '{}'::json
+        ) AS constituency_summary,
+        
+        -- Metric 3: Real-time detail list of active workers inside this AC boundary
+        COALESCE(
+          (SELECT json_agg(u_d) FROM (
+             SELECT 
+               u.id, u.full_name, u.mobile, u.role, u.village, u.booth_no, u.last_login_at 
+             FROM public.users u
+             JOIN active_user_footprints auf ON u.id = auf.uid
+             WHERE u.is_active = 1 
+               AND u.assigned_pc_id = $1 
+               AND u.assigned_ac_id = $2
+             ORDER BY u.last_login_at DESC NULLS LAST
+          ) u_d), '[]'::json
+        ) AS active_user_details
+      FROM (SELECT 1) dummy;
+    `;
+
+    const result = await pool.query(query, [pc_id, ac_id, mla_name]);
+    res.status(200).json(result.rows[0]);
+
+  } catch (err) {
+    console.error("MLA User Login Tracking API Error:", err.message);
     res.status(500).json({ error: err.message });
   }
 };

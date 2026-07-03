@@ -13,4 +13,13 @@ router.get(
   analyticsController.getLoginAndActivityMetrics
 );
 
+// Fetch scoped dashboard analytics for the logged-in MLA (Cached for 1 minute)
+router.get(
+  '/mla/user-logins', 
+  authenticate, 
+  authorize('mla'), 
+  useCache(60), 
+  analyticsController.getMlaLoginAndActivityMetrics
+);
+
 module.exports = router;
