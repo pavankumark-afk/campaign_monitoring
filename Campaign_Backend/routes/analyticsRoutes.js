@@ -9,7 +9,7 @@ router.get(
   '/user-logins', 
   authenticate, 
   authorize('super_admin'), 
-  useCache(60), 
+  useCache(300), 
   analyticsController.getLoginAndActivityMetrics
 );
 
@@ -18,7 +18,7 @@ router.get(
   '/mla/user-logins', 
   authenticate, 
   authorize('mla'), 
-  useCache(60), 
+  useCache(300), 
   analyticsController.getMlaLoginAndActivityMetrics
 );
 

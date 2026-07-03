@@ -1,5 +1,8 @@
 const pool = require('../config/db');
 
+// ==========================================
+// 1. SUPER ADMIN METRICS (GLOBAL snapshot)
+// ==========================================
 exports.getLoginAndActivityMetrics = async (req, res) => {
   try {
     const query = `
@@ -15,6 +18,7 @@ exports.getLoginAndActivityMetrics = async (req, res) => {
           u.id,
           u.assigned_pc_id,
           u.assigned_ac_id,
+          u.mandal,              -- Added mandal context
           CASE WHEN auf.uid IS NOT NULL THEN 1 ELSE 0 END AS logged_in_today
         FROM public.users u
         LEFT JOIN active_user_footprints auf ON u.id = auf.uid
@@ -29,7 +33,7 @@ exports.getLoginAndActivityMetrics = async (req, res) => {
         COALESCE(
           (SELECT json_agg(pc_g) FROM (
              SELECT 
-               pc.pc_name AS pc_name, -- Fallback fix if standard 'name' column is explicitly 'pc_name'
+               pc.pc_name AS pc_name, 
                COUNT(ua.id)::INT AS total_users,
                COALESCE(SUM(ua.logged_in_today), 0)::INT AS active_today
              FROM public.parliamentary_constituencies pc
@@ -43,7 +47,7 @@ exports.getLoginAndActivityMetrics = async (req, res) => {
         COALESCE(
           (SELECT json_agg(ac_g) FROM (
              SELECT 
-               ac.ac_name AS ac_name, -- Fallback fix if standard 'name' column is explicitly 'ac_name'
+               ac.ac_name AS ac_name, 
                COUNT(ua.id)::INT AS total_users,
                COALESCE(SUM(ua.logged_in_today), 0)::INT AS active_today
              FROM public.assembly_constituencies ac
@@ -53,11 +57,20 @@ exports.getLoginAndActivityMetrics = async (req, res) => {
           ) ac_g), '[]'::json
         ) AS ac_level_logins,
         
-        -- Metric 4: Real-time active user details matching profiles
+        -- Metric 4: Real-time active user details (with requested columns added)
         COALESCE(
           (SELECT json_agg(u_d) FROM (
              SELECT 
-               u.id, u.full_name, u.mobile, u.role, u.pc_name, u.assembly AS ac_name, u.last_login_at 
+               u.id, 
+               u.full_name, 
+               u.mobile, 
+               u.role, 
+               u.pc_name, 
+               u.assembly AS ac_name, 
+               u.mandal,               -- Added mandal column
+               u.village,
+               u.booth_no,
+               u.last_login_at 
              FROM public.users u
              JOIN active_user_footprints auf ON u.id = auf.uid
              WHERE u.is_active = 1
@@ -75,11 +88,13 @@ exports.getLoginAndActivityMetrics = async (req, res) => {
   }
 };
 
+// ==========================================
+// 2. MLA METRICS (SCOPED snapshot)
+// ==========================================
 exports.getMlaLoginAndActivityMetrics = async (req, res) => {
-  const mlaId = req.mla.id; // Extracted from authMiddleware
+  const mlaId = req.mla.id; 
 
   try {
-    // Step 1: Fetch the specific constituency assignments for this MLA
     const mlaProfile = await pool.query(
       'SELECT id, name, pc_id, ac_id FROM mlas WHERE id = $1', 
       [mlaId]
@@ -91,10 +106,8 @@ exports.getMlaLoginAndActivityMetrics = async (req, res) => {
 
     const { pc_id, ac_id, name: mla_name } = mlaProfile.rows[0];
 
-    // Step 2: Run the scoped analytics query
     const query = `
       WITH active_user_footprints AS (
-        -- Track activity across refresh tokens and voter modifications today
         SELECT user_id AS uid FROM public.refresh_tokens
           WHERE created_at >= CURRENT_DATE AND created_at < CURRENT_DATE + INTERVAL '1 day'
         UNION
@@ -102,9 +115,11 @@ exports.getMlaLoginAndActivityMetrics = async (req, res) => {
           WHERE bla_updated_at >= CURRENT_DATE AND bla_updated_at < CURRENT_DATE + INTERVAL '1 day'
       ),
       user_activity AS (
-        -- Scope user base strictly to this MLA's assigned AC and PC
         SELECT 
           u.id,
+          u.pc_name,              -- Added contextual profile strings
+          u.assembly AS ac_name,
+          u.mandal,
           CASE WHEN auf.uid IS NOT NULL THEN 1 ELSE 0 END AS logged_in_today
         FROM public.users u
         LEFT JOIN active_user_footprints auf ON u.id = auf.uid
@@ -119,9 +134,10 @@ exports.getMlaLoginAndActivityMetrics = async (req, res) => {
         (SELECT COUNT(*)::INT FROM user_activity) AS total_registered_users,
         (SELECT SUM(logged_in_today)::INT FROM user_activity) AS total_active_today,
         
-        -- Metric 2: Specific Constituency Target Card Detail
+        -- Metric 2: Specific Constituency target summary layout
         COALESCE(
           (SELECT json_build_object(
+             'pc_name', MAX(ua.pc_name),      -- Included geographical strings safely
              'ac_name', ac.ac_name,
              'total_users', COUNT(ua.id)::INT,
              'active_today', COALESCE(SUM(ua.logged_in_today), 0)::INT
@@ -133,11 +149,20 @@ exports.getMlaLoginAndActivityMetrics = async (req, res) => {
           ), '{}'::json
         ) AS constituency_summary,
         
-        -- Metric 3: Real-time detail list of active workers inside this AC boundary
+        -- Metric 3: Real-time detail list of active workers inside boundary
         COALESCE(
           (SELECT json_agg(u_d) FROM (
              SELECT 
-               u.id, u.full_name, u.mobile, u.role, u.village, u.booth_no, u.last_login_at 
+               u.id, 
+               u.full_name, 
+               u.mobile, 
+               u.role, 
+               u.pc_name,              -- Added pc_name
+               u.assembly AS ac_name,  -- Added assembly
+               u.mandal,               -- Added mandal
+               u.village, 
+               u.booth_no, 
+               u.last_login_at 
              FROM public.users u
              JOIN active_user_footprints auf ON u.id = auf.uid
              WHERE u.is_active = 1 
