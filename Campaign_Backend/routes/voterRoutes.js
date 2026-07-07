@@ -9,6 +9,12 @@ router.use(protect);
 
 // Hierarchical PC -> AC nested analytics dashboard endpoint
 router.get(
+  '/metrics/global-summary', 
+    authorize('super_admin', 'admin'),useCache(1800),   // 10 minutes cache
+    voterController.getGlobalCampaignSummary
+);
+
+router.get(
   '/metrics/hierarchical', 
     authorize('super_admin', 'admin'),useCache(1800),   // 10 minutes cache
     voterController.getNestedCampaignMetrics
