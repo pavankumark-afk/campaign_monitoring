@@ -6,6 +6,7 @@ import { apiClient } from './client';
  */
 
 const HIERARCHICAL_ENDPOINTS = ['/voters/metrics/hierarchical', '/metrics/hierarchical'];
+const GLOBAL_SUMMARY_ENDPOINTS = ['/voters/metrics/global-summary', '/metrics/global-summary'];
 const MLA_SELF_ENDPOINTS = ['/voters/metrics/my-constituency', '/metrics/my-constituency'];
 const HIERARCHICAL_CACHE_TTL_MS = 15000;
 
@@ -79,6 +80,21 @@ async function fetchHierarchicalRows() {
   }
 }
 
+async function fetchGlobalSummary() {
+  let lastError;
+
+  for (const endpoint of GLOBAL_SUMMARY_ENDPOINTS) {
+    try {
+      const { data } = await apiClient.get(endpoint);
+      return data || {};
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error('Failed to fetch global campaign summary');
+}
+
 async function fetchMlaSelfMetrics() {
   let lastError;
 
@@ -116,20 +132,36 @@ export const fetchSirSummary = async (params) => {
   let rows = null;
 
   if (scope === 'super_admin') {
-    rows = await fetchHierarchicalRows();
-    const totalElectors = rows.reduce((sum, pc) => sum + toNumber(pc?.total_voters), 0);
-    const totalContacted = rows.reduce((sum, pc) => sum + toNumber(pc?.contacted_count), 0);
-    const totalPending = rows.reduce((sum, pc) => sum + toNumber(pc?.remaining_count), 0);
-    const totalACs = rows.reduce((sum, pc) => sum + (Array.isArray(pc?.acs) ? pc.acs.length : 0), 0);
+    try {
+      const data = await fetchGlobalSummary();
+      const totalElectors = toNumber(data?.total_voters);
+      const totalContacted = toNumber(data?.contacted_count);
+      const totalPending = totalElectors - totalContacted;
 
-    return {
-      totalElectors,
-      totalContacted,
-      totalPending,
-      totalACs,
-      totalBLAs: null,
-      lastSyncedAt: new Date().toISOString(),
-    };
+      return {
+        totalElectors,
+        totalContacted,
+        totalPending,
+        totalACs: toNumber(data?.total_acs),
+        totalBLAs: null,
+        lastSyncedAt: new Date().toISOString(),
+      };
+    } catch {
+      rows = await fetchHierarchicalRows();
+      const totalElectors = rows.reduce((sum, pc) => sum + toNumber(pc?.total_voters), 0);
+      const totalContacted = rows.reduce((sum, pc) => sum + toNumber(pc?.contacted_count), 0);
+      const totalPending = rows.reduce((sum, pc) => sum + toNumber(pc?.remaining_count), 0);
+      const totalACs = rows.reduce((sum, pc) => sum + (Array.isArray(pc?.acs) ? pc.acs.length : 0), 0);
+
+      return {
+        totalElectors,
+        totalContacted,
+        totalPending,
+        totalACs,
+        totalBLAs: null,
+        lastSyncedAt: new Date().toISOString(),
+      };
+    }
   }
 
   if (scope === 'ac') {
