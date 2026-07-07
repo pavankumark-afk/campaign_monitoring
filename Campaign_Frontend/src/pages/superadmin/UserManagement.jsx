@@ -69,12 +69,11 @@ export default function UserManagement() {
             <div className="data-table-wrap">
               <table className="data-table">
                 <thead>
-                  <tr>
+                    <tr>
                     <th>Name</th>
                     <th>Mobile</th>
                     <th>Role</th>
                     <th>Status</th>
-                    <th>Last login</th>
                     <th>Downloads</th>
                     <th>Action</th>
                   </tr>
@@ -86,7 +85,6 @@ export default function UserManagement() {
                       <td>{user.mobile || '-'}</td>
                       <td>{user.role}</td>
                       <td style={{ textTransform: 'capitalize' }}>{user.status || 'active'}</td>
-                      <td>{user.last_login ? formatRelativeTime(user.last_login) : 'Never'}</td>
                       <td className="data-table__numeric">{user.total_downloads ?? 0}</td>
                       <td>
                         <button

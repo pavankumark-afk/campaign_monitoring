@@ -92,7 +92,7 @@ export default function SuperAdminDashboard() {
           delta={summaryLoading ? null : formatPercent(summary?.totalPending, summary?.totalElectors) + ' remaining'}
           deltaDirection="down"
         />
-        <StatTile label="Booth Level Agents" value={summaryLoading ? '—' : formatNumber(summary?.totalBLAs)} />
+        
       </div>
 
       <div className="page-section">

@@ -61,7 +61,7 @@ export default function AcDashboard() {
           delta={summaryLoading ? null : formatPercent(summary?.totalPending, summary?.totalElectors) + ' remaining'}
           deltaDirection="down"
         />
-        <StatTile label="Booth Level Agents" value={summaryLoading ? '—' : formatNumber(summary?.totalBoothAgents)} />
+        
       </div>
 
       <div className="page-section">

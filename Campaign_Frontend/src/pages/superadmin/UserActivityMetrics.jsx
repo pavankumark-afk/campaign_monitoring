@@ -171,7 +171,6 @@ export default function UserActivityMetrics() {
                     <th>Role</th>
                     <th>PC</th>
                     <th>AC</th>
-                    <th>Last login</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,7 +181,7 @@ export default function UserActivityMetrics() {
                       <td>{user.role}</td>
                       <td>{user.pc_name || 'Unassigned'}</td>
                       <td>{user.ac_name || 'Unassigned'}</td>
-                      <td>{formatRelativeTime(user.last_login_at)}</td>
+                      
                     </tr>
                   ))}
                 </tbody>
